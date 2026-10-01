@@ -1,0 +1,3 @@
+# Never upload local env files: this is a static site, so every file is public.
+.env*
+.vercel
