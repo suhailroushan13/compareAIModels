@@ -1,0 +1,32 @@
+# Keeps models.json and models.js in sync with the build folders, so contributors only add a folder.
+name: Sync builds
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validate build folders
+        if: github.event_name == 'pull_request'
+        run: node scripts/sync-builds.mjs --check
+
+      - name: Update models.json and models.js
+        if: github.event_name != 'pull_request'
+        run: |
+          node scripts/sync-builds.mjs
+          if [ -n "$(git status --porcelain models.json models.js)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add models.json models.js
+            git commit -m "Sync builds"
+            git push
+          fi

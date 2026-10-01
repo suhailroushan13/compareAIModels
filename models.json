@@ -1,0 +1,44 @@
+{
+  "prompt": "prompt.txt",
+  "efforts": { "none": "None", "minimal": "Minimal", "low": "Low", "medium": "Medium", "high": "High", "xhigh": "XHigh", "max": "Max", "ultra": "Ultra" },
+  "labs": [
+    {
+      "id": "anthropic", "name": "Anthropic", "color": "#d97757",
+      "models": [
+        { "slug": "opus-5.5", "name": "Claude Opus 5.5", "position": "Flagship / complex work", "efforts": ["low", "medium", "high", "max"] },
+        { "slug": "sonnet-5.5", "name": "Claude Sonnet 5.5", "position": "Fast / balanced", "efforts": ["low", "medium", "high", "max"] },
+        { "slug": "haiku-5.5", "name": "Claude Haiku 5.5", "position": "Fast / high-volume", "efforts": ["low", "medium", "high"] },
+        { "slug": "opus-5", "name": "Claude Opus 5", "position": "Previous flagship", "efforts": "configurable" },
+        { "slug": "sonnet-5", "name": "Claude Sonnet 5", "position": "Previous generation", "efforts": "configurable" },
+        { "slug": "opus-4.8", "name": "Claude Opus 4.8", "position": "Previous flagship", "efforts": "configurable" }
+      ]
+    },
+    {
+      "id": "google", "name": "Google", "color": "#4285f4",
+      "models": [
+        { "slug": "gemini-3.8-flash", "name": "Gemini 3.8 Flash", "position": "Latest high-performance Flash", "efforts": ["low", "medium", "high"], "aliases": ["gemini-3.8"] },
+        { "slug": "gemini-3.7-flash", "name": "Gemini 3.7 Flash", "position": "Previous Flash", "efforts": ["low", "medium", "high"] },
+        { "slug": "gemini-3.6-flash", "name": "Gemini 3.6 Flash", "position": "Previous Flash", "efforts": ["minimal", "low", "medium", "high"] },
+        { "slug": "gemini-3.5-flash", "name": "Gemini 3.5 Flash", "position": "Legacy / current Flash", "efforts": ["minimal", "low", "medium", "high"] },
+        { "slug": "gemini-3.5-flash-lite", "name": "Gemini 3.5 Flash-Lite", "position": "Cheap / high-volume", "efforts": ["minimal", "low", "medium", "high"] },
+        { "slug": "gemini-3.1-pro-preview", "name": "Gemini 3.1 Pro Preview", "position": "Advanced reasoning", "efforts": ["low", "medium", "high"] }
+      ]
+    },
+    {
+      "id": "openai", "name": "OpenAI", "color": "#10a37f",
+      "models": [
+        { "slug": "gpt-6-astra", "name": "GPT-6 Astra", "position": "Flagship / most capable", "efforts": ["low", "medium", "high", "xhigh", "max"], "aliases": ["gpt-6"] },
+        { "slug": "gpt-6.1-sol", "name": "GPT-6.1 Sol", "position": "Near-flagship, cheaper", "efforts": ["low", "medium", "high", "xhigh", "max"] },
+        { "slug": "gpt-6-luna", "name": "GPT-6 Luna", "position": "Efficient / high-volume", "efforts": ["none", "low", "medium", "high", "xhigh", "max"] },
+        { "slug": "gpt-5.6-sol", "name": "GPT-5.6 Sol", "position": "Professional flagship", "efforts": ["medium", "high", "max", "ultra"] },
+        { "slug": "gpt-5.6-terra", "name": "GPT-5.6 Terra", "position": "Balanced", "efforts": ["low", "medium", "high", "max", "ultra"] },
+        { "slug": "gpt-5.6-luna", "name": "GPT-5.6 Luna", "position": "Fast / cost-efficient", "efforts": ["low", "medium", "high", "max", "ultra"] }
+      ]
+    }
+  ],
+  "builds": [
+    { "id": "anthropic/opus-5.5-xhigh", "lab": "anthropic", "model": "opus-5.5", "effort": "xhigh" },
+    { "id": "google/gemini-3.8-high", "lab": "google", "model": "gemini-3.8-flash", "effort": "high" },
+    { "id": "openai/gpt-6-xhigh", "lab": "openai", "model": "gpt-6-astra", "effort": "xhigh" }
+  ]
+}

@@ -1,0 +1,138 @@
+Build a complete, playable 3D mini-game entirely inside a single web page using HTML, CSS, and JavaScript. You may use Three.js from a CDN, but do not require any build tools, frameworks, servers, or external assets that need to be downloaded manually.
+
+### Game: "Tiny 3D Island"
+
+Create a polished low-poly 3D island exploration game viewed from a third-person camera.
+
+The scene must contain:
+
+* A small floating island with realistic terrain elevation, grass, dirt, rocks, and a surrounding ocean.
+* A small stylized wooden house with walls, roof, door, windows, chimney, and a small porch.
+* At least 5 trees with trunks, branches, and foliage.
+* Rocks, flowers, grass patches, and other environmental details distributed naturally around the island.
+* A sun, sky gradient, clouds, atmospheric fog, and soft shadows.
+* Water that has animated waves and subtle reflections.
+* A character that the player controls with WASD / arrow keys.
+* Smooth third-person camera movement following the character.
+* Character idle, walking, and running animations created procedurally if no external character model is used.
+* Collision detection so the player cannot walk through the house, trees, rocks, or outside the island.
+* A simple day/night cycle.
+* Ambient environmental animation: moving clouds, swaying trees/grass, animated water, and subtle floating particles.
+
+### Gameplay
+
+The player starts outside the house.
+
+Add 5 glowing crystals around the island that the player must collect.
+
+When the player gets close to a crystal, it should float, rotate, glow, and disappear when collected.
+
+Display:
+
+CRYSTALS: 0 / 5
+
+After collecting all 5 crystals, show a polished "Island Complete!" overlay with a restart button.
+
+Add a small compass/minimap in the corner showing the player's approximate position and the locations of remaining crystals.
+
+### Interaction
+
+Add:
+
+* E to enter the house.
+* E to open/close the door.
+* A simple interior containing a table, chair, bed, lamp, and window.
+* When inside, smoothly transition the camera rather than teleporting it.
+* Press ESC to return to the normal exploration view.
+* Mouse drag to rotate the camera.
+* Mouse wheel to zoom.
+* Shift to sprint.
+* Space to jump.
+
+### Visual quality
+
+Make it look like a polished indie game rather than a technical Three.js demo.
+
+Use:
+
+* Consistent low-poly art direction.
+* Good proportions.
+* Depth and layering.
+* Atmospheric perspective.
+* Shadows.
+* Ambient lighting.
+* Emissive materials for crystals and lamps.
+* Smooth camera interpolation.
+* Carefully chosen colors.
+* Procedural geometry where appropriate.
+
+Do not create everything as primitive cubes placed randomly. Construct recognizable objects from multiple meshes and give the environment intentional composition.
+
+### UI
+
+Create a minimal game HUD:
+
+Top-left:
+CRYSTALS: 0 / 5
+
+Bottom-left:
+WASD Move · Shift Sprint · Space Jump · E Interact
+
+Top-right:
+A small compass/minimap.
+
+Add a small settings button that opens a panel containing:
+
+* Shadows ON/OFF
+* Quality: Low / Medium / High
+* Day/Night slider
+* Reset Game
+
+### Technical requirements
+
+Everything must run by opening the HTML file directly in a browser.
+
+Do not use React, Vue, Vite, npm, TypeScript, or a backend.
+
+Keep the implementation in one self-contained HTML file.
+
+Use Three.js from a CDN if needed.
+
+Handle browser resizing correctly.
+
+Use requestAnimationFrame for the game loop.
+
+Avoid unnecessary dependencies.
+
+Organize the JavaScript into clear sections/classes for:
+
+* Scene
+* Player
+* Camera
+* Environment
+* Collectibles
+* Collision
+* Input
+* Game state
+* UI
+
+Include comments explaining important systems.
+
+### Performance
+
+The game should remain reasonably smooth on a normal modern laptop.
+
+Use instancing or shared geometries/materials where appropriate.
+
+Do not create thousands of unnecessary individual meshes.
+
+### Final requirement
+
+Do not give me an explanation of how to build it.
+
+Actually implement the complete game and return the finished HTML code.
+
+The first screen should immediately show the playable 3D island.
+
+Make reasonable design decisions yourself instead of asking questions.
+

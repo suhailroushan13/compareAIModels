@@ -1,0 +1,1135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compare AI Models</title>
+<meta name="description" content="One prompt, every AI model. Search models, filter by effort, and compare their Tiny 3D Island builds live, side by side. Open source.">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 20l8-4 6 2 7-4 5 4-13 8z' fill='%2310a37f'/%3E%3Cpath d='M3 20l13 8 13-8-4 7-9 3-9-3z' fill='%23d97757'/%3E%3Ccircle cx='22' cy='8' r='4' fill='%234285f4'/%3E%3C/svg%3E">
+<script>
+  // Apply the saved theme before first paint (light | dark | system).
+  (function () {
+    var t = 'system';
+    try { t = localStorage.getItem('theme') || 'system'; } catch (e) {}
+    var dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', dark);
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="models.js"></script>
+<style>
+  /* shadcn/ui "neutral" theme tokens */
+  :root {
+    --radius: .625rem;
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --background: oklch(1 0 0);
+    --foreground: oklch(.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(.145 0 0);
+    --primary: oklch(.205 0 0);
+    --primary-foreground: oklch(.985 0 0);
+    --secondary: oklch(.97 0 0);
+    --secondary-foreground: oklch(.205 0 0);
+    --muted: oklch(.97 0 0);
+    --muted-foreground: oklch(.556 0 0);
+    --accent: oklch(.97 0 0);
+    --accent-foreground: oklch(.205 0 0);
+    --border: oklch(.922 0 0);
+    --input: oklch(.922 0 0);
+    --ring: oklch(.708 0 0);
+    --control: oklch(1 0 0);
+    --control-hover: oklch(.97 0 0);
+    --live: oklch(.627 .194 149.214);
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / .05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / .1), 0 4px 6px -4px rgb(0 0 0 / .1);
+    --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    color-scheme: light;
+  }
+  .dark {
+    --background: oklch(.145 0 0);
+    --foreground: oklch(.985 0 0);
+    --card: oklch(.205 0 0);
+    --card-foreground: oklch(.985 0 0);
+    --popover: oklch(.205 0 0);
+    --popover-foreground: oklch(.985 0 0);
+    --primary: oklch(.922 0 0);
+    --primary-foreground: oklch(.205 0 0);
+    --secondary: oklch(.269 0 0);
+    --secondary-foreground: oklch(.985 0 0);
+    --muted: oklch(.269 0 0);
+    --muted-foreground: oklch(.708 0 0);
+    --accent: oklch(.269 0 0);
+    --accent-foreground: oklch(.985 0 0);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(.556 0 0);
+    --control: oklch(1 0 0 / 4.5%);
+    --control-hover: oklch(1 0 0 / 7.5%);
+    --live: oklch(.723 .219 149.579);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / .3), 0 1px 2px -1px rgb(0 0 0 / .3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / .4), 0 4px 6px -4px rgb(0 0 0 / .4);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; border-color: var(--border); }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--background); color: var(--foreground);
+    font: 14px/1.5 var(--font-sans); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.has-tray { padding-bottom: 96px; }
+  a { color: inherit; }
+  [hidden] { display: none !important; }
+  button, input { font-family: inherit; }
+  :focus-visible { outline: none; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+  .icon { width: 16px; height: 16px; flex: none; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted-foreground); }
+  code { padding: 2px 6px; border-radius: var(--radius-sm); background: var(--muted); font: 500 12.5px var(--font-mono); }
+  kbd {
+    display: inline-flex; align-items: center; justify-content: center; height: 20px; min-width: 20px; padding: 0 5px;
+    border-radius: var(--radius-sm); background: var(--muted); color: var(--muted-foreground); font: 500 12px var(--font-sans);
+  }
+  .ring-focus:focus-visible, .btn:focus-visible, .tab:focus-visible, .chip:focus-visible, .switch:focus-visible, .menu-item:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent); border-color: var(--ring);
+  }
+
+  /* ---------- Button ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 16px;
+    border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--foreground);
+    font: 500 14px/1 var(--font-sans); white-space: nowrap; text-decoration: none; cursor: pointer;
+    transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+  }
+  .btn-default { background: var(--primary); color: var(--primary-foreground); box-shadow: var(--shadow-xs); }
+  .btn-default:hover { background: color-mix(in oklab, var(--primary) 90%, transparent); }
+  .btn-outline { background: var(--control); border-color: var(--input); box-shadow: var(--shadow-xs); }
+  :root:not(.dark) .btn-outline { border-color: var(--border); }
+  .btn-outline:hover { background: var(--control-hover); }
+  .btn-ghost:hover { background: var(--accent); }
+  .btn-sm { height: 32px; padding: 0 12px; gap: 6px; font-size: 13px; }
+  .btn-icon { width: 36px; padding: 0; }
+  .btn-icon.btn-sm { width: 32px; }
+
+  /* ---------- Badge ---------- */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border: 1px solid transparent;
+    border-radius: var(--radius-md); font: 500 12px var(--font-sans); white-space: nowrap;
+  }
+  .badge-secondary { background: var(--secondary); color: var(--secondary-foreground); }
+  .badge-outline { border-color: var(--border); color: var(--foreground); }
+  .badge .icon { width: 12px; height: 12px; }
+
+  /* ---------- Card ---------- */
+  .card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-sm); }
+  .card-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.2; letter-spacing: -.01em; }
+  .card-description { margin: 6px 0 0; color: var(--muted-foreground); font-size: 14px; }
+
+  /* ---------- Header ---------- */
+  .site-header {
+    position: sticky; top: 0; z-index: 30; border-bottom: 1px solid var(--border);
+    background: color-mix(in oklab, var(--background) 85%, transparent);
+    backdrop-filter: saturate(1.8) blur(10px); -webkit-backdrop-filter: saturate(1.8) blur(10px);
+  }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -.01em; text-decoration: none; }
+  .brand svg { width: 24px; height: 24px; }
+  .header-actions { display: flex; align-items: center; gap: 6px; }
+  .gh-sep { width: 1px; height: 16px; background: var(--border); }
+  .menu-wrap { position: relative; }
+  .theme-sun { display: block; }
+  .theme-moon { display: none; }
+  .dark .theme-sun { display: none; }
+  .dark .theme-moon { display: block; }
+  .menu {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 140px; padding: 4px;
+    background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border);
+    border-radius: var(--radius-md); box-shadow: var(--shadow-md); animation: pop .12s ease-out;
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+  .menu-item {
+    display: flex; align-items: center; gap: 8px; width: 100%; height: 32px; padding: 0 8px; border: 1px solid transparent;
+    border-radius: var(--radius-sm); background: transparent; color: inherit; font-size: 14px; text-align: left; cursor: pointer;
+  }
+  .menu-item:hover, .menu-item:focus-visible { background: var(--accent); }
+  .menu-item .icon { color: var(--muted-foreground); }
+  .menu-item .check { margin-left: auto; color: var(--foreground); opacity: 0; }
+  .menu-item[aria-checked="true"] .check { opacity: 1; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 56px 0 28px; }
+  .announce {
+    display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-height: 30px; padding: 4px 12px;
+    border: 1px solid var(--border); border-radius: 999px; background: var(--card); box-shadow: var(--shadow-xs);
+    color: var(--muted-foreground); font-size: 13px;
+  }
+  .announce b { color: var(--foreground); font: 500 13px var(--font-mono); font-variant-numeric: tabular-nums; transition: color .8s; }
+  .announce b.bump { color: var(--live); transition: none; }
+  .announce .sep { width: 1px; height: 14px; background: var(--border); }
+  .live { display: inline-flex; align-items: center; gap: 7px; color: var(--foreground); font-weight: 500; }
+  .pulse { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--live); }
+  .pulse::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--live); animation: ping 1.8s cubic-bezier(0, 0, .2, 1) infinite; }
+  @keyframes ping { 75%, 100% { transform: scale(2.6); opacity: 0; } }
+  .announce.offline .pulse, .announce.offline .pulse::after { background: var(--muted-foreground); animation: none; }
+  h1 { margin: 20px 0 12px; font-size: clamp(36px, 5.6vw, 60px); font-weight: 600; line-height: 1.04; letter-spacing: -.045em; }
+  h1 span { color: var(--muted-foreground); }
+  .lead { max-width: 640px; margin: 0; color: var(--muted-foreground); font-size: 17px; line-height: 1.6; }
+
+  /* ---------- Finder ---------- */
+  .finder { padding: 16px; }
+  .search { position: relative; display: flex; align-items: center; }
+  .search > .icon { position: absolute; left: 12px; color: var(--muted-foreground); pointer-events: none; }
+  .search kbd { position: absolute; right: 10px; pointer-events: none; }
+  .input {
+    width: 100%; height: 40px; padding: 0 40px 0 36px; border: 1px solid var(--input); border-radius: var(--radius-md);
+    background: transparent; color: var(--foreground); font-size: 14px; box-shadow: var(--shadow-xs); outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .dark .input { background: var(--control); }
+  .input::placeholder { color: var(--muted-foreground); }
+  .input:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent); }
+  .input::-webkit-search-cancel-button { display: none; }
+  .filters { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px 16px; margin-top: 14px; }
+  .label { color: var(--muted-foreground); font-size: 13px; font-weight: 500; }
+  .filter-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+
+  /* Tabs (used as toggle groups) */
+  .tabs {
+    display: inline-flex; align-items: center; gap: 2px; justify-self: start; max-width: 100%; height: 36px; padding: 3px;
+    border-radius: var(--radius-lg); background: var(--muted); overflow-x: auto; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    display: inline-flex; align-items: center; gap: 6px; flex: none; height: 100%; padding: 0 10px;
+    border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--muted-foreground);
+    font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: color .15s, background-color .15s, box-shadow .15s;
+  }
+  .tab:hover { color: var(--foreground); }
+  .tab[aria-pressed="true"] { background: var(--background); color: var(--foreground); box-shadow: var(--shadow-sm); }
+  .dark .tab[aria-pressed="true"] { background: var(--input); border-color: var(--input); }
+  .tab .num { color: var(--muted-foreground); font: 500 11px var(--font-mono); }
+  .tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lab); }
+
+  /* Switch */
+  .switch-field { display: inline-flex; align-items: center; gap: 8px; flex: none; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .switch {
+    position: relative; width: 32px; height: 18px; padding: 0; border: 1px solid transparent; border-radius: 999px;
+    background: var(--input); box-shadow: var(--shadow-xs); cursor: pointer; transition: background-color .15s;
+  }
+  .dark .switch { background: color-mix(in oklab, var(--input) 80%, transparent); }
+  .switch span { position: absolute; top: 0; left: 0; width: 16px; height: 16px; border-radius: 50%; background: var(--background); transition: transform .15s; }
+  .dark .switch span { background: var(--foreground); }
+  .switch[aria-checked="true"] { background: var(--primary); }
+  .switch[aria-checked="true"] span { transform: translateX(14px); }
+  .dark .switch[aria-checked="true"] span { background: var(--primary-foreground); }
+
+  /* ---------- Results ---------- */
+  .results-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 24px 0 4px; min-height: 32px; color: var(--muted-foreground); font-size: 13px; }
+  .results-bar strong { color: var(--foreground); font-weight: 500; }
+  .results-bar .spacer { flex: 1; }
+  .legend { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; }
+  .legend .lg-built { border: 1px solid var(--primary); background: var(--primary); }
+  .legend .lg-open { border: 1px dashed color-mix(in oklab, var(--foreground) 35%, transparent); margin-left: 8px; }
+
+  .lab-group { margin-top: 20px; }
+  .lab-head { display: flex; align-items: center; gap: 8px; margin: 0 0 8px 2px; font-size: 13px; font-weight: 500; color: var(--muted-foreground); }
+  .lab-head .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lab); }
+  .lab-head strong { color: var(--foreground); font-weight: 600; }
+  .rows { margin: 0; padding: 0; list-style: none; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1.4fr); align-items: center; gap: 12px 16px; padding: 14px 16px; }
+  .row + .row { border-top: 1px solid var(--border); }
+  .row:hover { background: color-mix(in oklab, var(--muted) 50%, transparent); }
+  .avatar {
+    display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: var(--radius-md);
+    border: 1px solid color-mix(in oklab, var(--lab) 25%, transparent); background: color-mix(in oklab, var(--lab) 12%, transparent);
+    color: var(--lab); font-size: 14px; font-weight: 600;
+  }
+  .row-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14.5px; font-weight: 500; letter-spacing: -.005em; }
+  .row-sub { color: var(--muted-foreground); font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 10px; border: 1px solid transparent;
+    border-radius: var(--radius-md); font: 500 12.5px var(--font-sans); white-space: nowrap; text-decoration: none; cursor: pointer;
+    transition: opacity .15s, background-color .15s, border-color .15s, color .15s, box-shadow .15s;
+  }
+  .chip-built { border-color: var(--input); background: var(--control); color: var(--foreground); box-shadow: var(--shadow-xs); }
+  :root:not(.dark) .chip-built { border-color: color-mix(in oklab, var(--foreground) 18%, transparent); }
+  .chip-built:hover { background: var(--control-hover); }
+  .checkbox {
+    display: grid; place-items: center; width: 14px; height: 14px; border: 1px solid color-mix(in oklab, var(--foreground) 30%, transparent);
+    border-radius: 4px; color: var(--primary-foreground); transition: background-color .15s, border-color .15s;
+  }
+  .checkbox .icon { width: 10px; height: 10px; stroke-width: 3; opacity: 0; }
+  .chip-built[aria-pressed="true"] { border-color: var(--primary); background: var(--accent); }
+  .chip-built[aria-pressed="true"] .checkbox { border-color: var(--primary); background: var(--primary); }
+  .chip-built[aria-pressed="true"] .checkbox .icon { opacity: 1; }
+  .chip-open { border: 1px dashed color-mix(in oklab, var(--foreground) 22%, transparent); color: var(--muted-foreground); }
+  .chip-open:hover { border-color: color-mix(in oklab, var(--foreground) 45%, transparent); background: var(--accent); color: var(--foreground); }
+  .chip-open .icon { width: 12px; height: 12px; }
+  .chip.dim { opacity: .35; }
+  .chip.dim:hover, .chip.dim[aria-pressed="true"] { opacity: 1; }
+
+  .empty { display: grid; justify-items: center; gap: 6px; margin-top: 24px; padding: 48px 24px; border: 1px dashed var(--border); border-radius: var(--radius-xl); text-align: center; }
+  .empty-icon { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 6px; border-radius: var(--radius-lg); background: var(--muted); }
+  .empty-icon .icon { width: 20px; height: 20px; }
+  .empty h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .empty p { margin: 0; max-width: 420px; color: var(--muted-foreground); }
+
+  /* ---------- Selection tray ---------- */
+  .tray {
+    position: fixed; z-index: 40; left: 50%; bottom: 16px; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 8px; width: min(780px, calc(100% - 32px)); padding: 8px 8px 8px 14px;
+    background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border);
+    border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); animation: rise .2s ease-out;
+  }
+  @keyframes rise { from { transform: translate(-50%, 12px); opacity: 0; } }
+  .tray-count { flex: none; color: var(--muted-foreground); font-size: 13px; }
+  .tray-items { display: flex; gap: 6px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .tray-items::-webkit-scrollbar { display: none; }
+  .tray-items .badge { height: 28px; padding: 0 2px 0 9px; gap: 6px; flex: none; }
+  .tray-items .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lab); }
+  .tray-items button { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted-foreground); cursor: pointer; }
+  .tray-items button:hover { background: var(--accent); color: var(--foreground); }
+  .tray-items button .icon { width: 13px; height: 13px; }
+
+  /* ---------- Compare view ---------- */
+  .compare-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 28px 0 20px; }
+  .compare-bar h2 { flex: 1; min-width: 200px; margin: 0; font-size: clamp(22px, 3vw, 30px); font-weight: 600; letter-spacing: -.03em; }
+  .compare-actions { display: flex; gap: 8px; }
+  .compare-grid { display: grid; gap: 16px; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); }
+  .compare-grid[data-n="1"] { max-width: 980px; }
+
+  .build-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; transition: border-color .2s, box-shadow .2s; }
+  .build-card.is-active { border-color: var(--lab); box-shadow: 0 0 0 3px color-mix(in oklab, var(--lab) 25%, transparent); }
+  .build-head { display: flex; align-items: center; gap: 12px; padding: 16px 12px 16px 16px; }
+  .build-title { min-width: 0; flex: 1; }
+  .build-title p { margin: 2px 0 0; color: var(--muted-foreground); font-size: 13px; }
+  .frame { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: #0f1a22; border-block: 1px solid var(--border); }
+  .frame::before { content: "Loading island…"; position: absolute; inset: 0; display: grid; place-items: center; color: #ffffff80; font-size: 13px; }
+  .frame iframe {
+    position: absolute; top: 0; left: 0; width: 1024px; height: 640px; border: 0;
+    transform-origin: 0 0; transform: scale(var(--s, .36)); pointer-events: none; background: transparent;
+  }
+  .build-card.is-active .frame iframe { pointer-events: auto; }
+  .overlay { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding: 0 0 14px; border: 0; background: transparent; cursor: pointer; }
+  .overlay span {
+    display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: var(--radius-md);
+    background: oklch(.205 0 0 / .85); color: oklch(.985 0 0); font-size: 13px; font-weight: 500;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s;
+  }
+  .overlay span .icon { width: 14px; height: 14px; }
+  .overlay:hover span, .overlay:focus-visible span { opacity: 1; transform: none; }
+  @media (hover: none) { .overlay span { opacity: 1; transform: none; } }
+  .build-card.is-active .overlay { display: none; }
+  .playing-note { display: none; padding: 10px 16px 0; color: var(--muted-foreground); font-size: 12.5px; }
+  .build-card.is-active .playing-note { display: block; }
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 16px 16px 0; }
+  .metrics dt { color: var(--muted-foreground); font-size: 12px; }
+  .metrics dd { margin: 2px 0 0; font: 500 15px var(--font-mono); font-variant-numeric: tabular-nums; transition: color .8s; }
+  .metrics dd.bump { color: var(--live); transition: none; }
+  .card-meta { margin: 12px 16px 0; color: var(--muted-foreground); font-size: 13px; }
+  .build-actions { display: flex; gap: 8px; margin-top: auto; padding: 16px; }
+  .build-actions .btn { flex: 1; }
+
+  /* ---------- Prompt + contribute ---------- */
+  .lower { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-top: 56px; }
+  .panel { min-width: 0; padding: 24px; }
+  .prompt {
+    max-height: 340px; overflow: auto; margin: 20px 0 0; padding: 16px; border-radius: var(--radius-md);
+    background: var(--muted); font: 12.5px/1.7 var(--font-mono); white-space: pre-wrap; word-break: break-word;
+  }
+  .steps { display: grid; gap: 14px; margin: 20px 0 22px; padding: 0; list-style: none; counter-reset: step; }
+  .steps li { position: relative; padding-left: 36px; counter-increment: step; font-size: 14px; }
+  .steps li::before {
+    content: counter(step); position: absolute; left: 0; top: -1px; display: grid; place-items: center; width: 24px; height: 24px;
+    border: 1px solid var(--border); border-radius: 50%; background: var(--muted); font: 500 12px var(--font-mono);
+  }
+  .panel-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .site-footer { margin-top: 56px; border-top: 1px solid var(--border); }
+  .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding-top: 24px; padding-bottom: 32px; color: var(--muted-foreground); font-size: 13px; }
+  .footer-inner a { font-weight: 500; text-underline-offset: 4px; }
+
+  /* ---------- Toast (sonner-style) ---------- */
+  .toast {
+    position: fixed; z-index: 70; right: 16px; bottom: 16px; display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px; background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); font-size: 13px; font-weight: 500;
+    opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .2s, transform .2s;
+  }
+  .toast.show { opacity: 1; transform: none; }
+  body.has-tray .toast { bottom: 88px; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 1180px) {
+    .compare-grid[data-n="3"], .compare-grid[data-n="4"] { --cols: 2; }
+    .lower { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 860px) {
+    .row { grid-template-columns: 36px minmax(0, 1fr); }
+    .chips { grid-column: 1 / -1; }
+  }
+  @media (max-width: 760px) {
+    .compare-grid { --cols: 1 !important; }
+    .filters { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .filters .label:not(:first-child) { margin-top: 8px; }
+    .legend { display: none; }
+  }
+  @media (max-width: 600px) {
+    .container { padding: 0 16px; }
+    .hero { padding: 32px 0 20px; }
+    .gh-label, .gh-sep, .search kbd, .tray-count, .updated-sep, #updated { display: none; }
+    .tabs { flex-wrap: wrap; height: auto; }
+    .tab { height: 30px; }
+    .filter-line { flex-wrap: wrap; }
+    .finder { padding: 12px; }
+    .row { padding: 14px 12px; }
+    .tray { bottom: 10px; width: calc(100% - 20px); }
+    .tray .btn-ghost { display: none; }
+    .compare-actions { width: 100%; }
+    .compare-actions .btn { flex: 1; }
+    .toast { left: 16px; right: 16px; top: 16px; bottom: auto !important; transform: translateY(-8px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pulse::after, .tray, .menu { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="./" data-nav="list">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 20l8-4 6 2 7-4 5 4-13 8z" fill="#10a37f"/><path d="M3 20l13 8 13-8-4 7-9 3-9-3z" fill="#d97757"/><circle cx="22" cy="8" r="4" fill="#4285f4"/></svg>
+      compareAIModels
+    </a>
+    <div class="header-actions">
+      <a class="btn btn-ghost btn-sm" id="gh-link" target="_blank" rel="noopener" aria-label="Star on GitHub">
+        <svg class="icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span class="gh-label">Star</span>
+        <span class="gh-sep"></span>
+        <span class="mono" id="gh-stars">—</span>
+      </a>
+      <div class="menu-wrap">
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" id="theme-btn" aria-haspopup="menu" aria-expanded="false" aria-label="Change theme">
+          <i class="theme-sun" data-icon="sun"></i><i class="theme-moon" data-icon="moon"></i>
+        </button>
+        <div class="menu" id="theme-menu" role="menu" hidden>
+          <button type="button" class="menu-item" role="menuitemradio" data-theme-set="light"><i data-icon="sun"></i>Light<i class="check" data-icon="check"></i></button>
+          <button type="button" class="menu-item" role="menuitemradio" data-theme-set="dark"><i data-icon="moon"></i>Dark<i class="check" data-icon="check"></i></button>
+          <button type="button" class="menu-item" role="menuitemradio" data-theme-set="system"><i data-icon="monitor"></i>System<i class="check" data-icon="check"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <!-- ================= List view ================= -->
+  <div id="view-list">
+    <section class="hero">
+      <div class="announce" id="announce">
+        <span class="live"><span class="pulse" aria-hidden="true"></span><span id="live-label">Live</span></span>
+        <span class="sep"></span>
+        <span><b id="stat-visits">—</b> visits</span>
+        <span><b id="stat-plays">—</b> plays</span>
+        <span><b id="stat-stars">—</b> stars</span>
+        <span><b id="stat-forks">—</b> forks</span>
+        <span class="sep updated-sep"></span>
+        <span id="updated">connecting…</span>
+      </div>
+      <h1>One prompt. <span>Every model.</span></h1>
+      <p class="lead">The same Tiny 3D Island prompt, built by <span id="n-models">–</span> AI models at different effort levels. Search for a model, filter by effort, and compare builds live, side by side.</p>
+    </section>
+
+    <section class="card finder" aria-label="Find models">
+      <div class="search">
+        <i data-icon="search"></i>
+        <input class="input" id="q" type="search" placeholder="Search models: opus, gemini flash, gpt-6…" autocomplete="off" spellcheck="false" aria-label="Search models">
+        <kbd>/</kbd>
+      </div>
+      <div class="filters">
+        <span class="label">Effort</span>
+        <div class="tabs" id="effort-filter" role="group" aria-label="Filter by effort"></div>
+        <span class="label">Lab</span>
+        <div class="filter-line">
+          <div class="tabs" id="lab-filter" role="group" aria-label="Filter by lab"></div>
+          <label class="switch-field" for="built-only">
+            <button type="button" class="switch" id="built-only" role="switch" aria-checked="false"><span></span></button>
+            Built only
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <div class="results-bar">
+      <span id="results-count"></span>
+      <button type="button" class="btn btn-ghost btn-sm" id="clear-filters" hidden><i data-icon="x"></i>Clear filters</button>
+      <span class="spacer"></span>
+      <span class="legend"><i class="lg-built"></i>Built: select to compare <i class="lg-open"></i>Open slot: add it on GitHub</span>
+      <button type="button" class="btn btn-outline btn-sm" id="compare-all" hidden></button>
+    </div>
+    <div id="results"></div>
+
+    <section class="lower" id="contribute">
+      <div class="card panel" id="prompt-panel" hidden>
+        <h2 class="card-title">The prompt</h2>
+        <p class="card-description">Every build gets this brief, word for word.</p>
+        <pre class="prompt" id="prompt-text"></pre>
+      </div>
+      <div class="card panel">
+        <h2 class="card-title">Add a build</h2>
+        <p class="card-description">Every dashed slot is a build nobody has made yet. Pick one and send a pull request.</p>
+        <ol class="steps">
+          <li>Give the model <code>prompt.txt</code> as-is, at the effort you picked.</li>
+          <li>Save its HTML as <code>lab/model-effort/index.html</code>, e.g. <code>openai/gpt-6-luna-high/</code>, with a copy of <code>prompt.txt</code>.</li>
+          <li>Open a pull request. Once it's merged, the build shows up here automatically.</li>
+        </ol>
+        <div class="panel-actions">
+          <a class="btn btn-default" id="fork-btn" target="_blank" rel="noopener"><i data-icon="fork"></i>Fork on GitHub</a>
+          <a class="btn btn-outline" id="contributing-btn" target="_blank" rel="noopener"><i data-icon="book"></i>How to contribute</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= Compare view ================= -->
+  <div id="view-compare" hidden>
+    <div class="compare-bar">
+      <a class="btn btn-outline" href="./" data-nav="list"><i data-icon="arrow-left"></i>All models</a>
+      <h2 id="compare-title"></h2>
+      <div class="compare-actions">
+        <button type="button" class="btn btn-outline" id="add-more"><i data-icon="plus"></i>Add a build</button>
+        <button type="button" class="btn btn-default" id="copy-link"><i data-icon="link"></i>Copy link</button>
+      </div>
+    </div>
+    <div class="compare-grid" id="compare-grid"></div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <span>Open source. Built in public. Anyone can add a build.</span>
+    <span><a id="footer-repo" target="_blank" rel="noopener"></a> · counters by <a href="https://github.com/JasonLovesDoggo/abacus" target="_blank" rel="noopener">Abacus</a></span>
+  </div>
+</footer>
+
+<div class="tray" id="tray" role="region" aria-label="Selected builds" hidden>
+  <span class="tray-count" id="tray-count"></span>
+  <div class="tray-items" id="tray-items"></div>
+  <button type="button" class="btn btn-ghost btn-sm" id="tray-clear">Clear</button>
+  <button type="button" class="btn btn-default btn-sm" id="tray-go"></button>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ======================================================================
+   Models and builds come from models.js, generated from models.json by
+   scripts/sync-builds.mjs (a GitHub Action runs it on every push).
+   ====================================================================== */
+const REPO = 'suhailroushan13/compareAIModels';
+const BRANCH = 'main';
+const COUNTER_API = 'https://abacus.jasoncameron.dev';
+const COUNTER_NS = 'compareaimodels-suhailroushan13';
+const MAX_COMPARE = 4;
+const COUNTER_POLL_MS = 20_000;
+const GITHUB_POLL_MS = 90_000;   // unauthenticated GitHub API allows 60 requests/hour
+const PREVIEW_WIDTH = 1024;      // previews render at this width, then scale to fit
+
+/* ---------- icons (lucide) ---------- */
+const ICONS = {
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  'arrow-left': '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  'arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  external: '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+  code: '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
+  fork: '<circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v3"/>',
+  book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
+  trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+  'search-x': '<path d="m13.5 8.5-5 5"/><path d="m8.5 8.5 5 5"/><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+};
+const icon = name => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+function hydrateIcons(root = document) {
+  const tpl = document.createElement('template');
+  root.querySelectorAll('i[data-icon]').forEach(el => {
+    tpl.innerHTML = icon(el.dataset.icon);
+    const svg = tpl.content.firstElementChild;
+    if (el.className) svg.classList.add(...el.className.split(/\s+/));
+    el.replaceWith(svg);
+  });
+}
+
+/* ---------- helpers ---------- */
+const $ = (sel, el = document) => el.querySelector(sel);
+const fmt = new Intl.NumberFormat('en');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const session = {
+  get(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const repoUrl = `https://github.com/${REPO}`;
+const sourceUrl = path => `${repoUrl}/blob/HEAD/${path}`;
+const newBuildUrl = folder => `${repoUrl}/new/${BRANCH}?filename=${encodeURIComponent(`${folder}/index.html`)}`;
+
+function timeAgo(date) {
+  const s = Math.round((Date.now() - date) / 1000);
+  if (s < 5) return 'just now';
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+  for (const [unit, secs] of [['day', 86400], ['hour', 3600], ['minute', 60]]) {
+    if (s >= secs) return rtf.format(-Math.floor(s / secs), unit);
+  }
+  return rtf.format(-s, 'second');
+}
+
+// Tween a number element to a new value; flash it when the value goes up.
+function setNum(el, value) {
+  if (!el || value == null) return;
+  const had = el.dataset.v !== undefined;
+  const from = had ? Number(el.dataset.v) : 0;
+  el.dataset.v = value;
+  if (had && value > from) {
+    el.classList.add('bump');
+    setTimeout(() => el.classList.remove('bump'), 120);
+  }
+  cancelAnimationFrame(el._raf);
+  if (reduceMotion || from === value) { el.textContent = fmt.format(value); return; }
+  const t0 = performance.now(), dur = had ? 700 : 1200;
+  const step = now => {
+    const p = Math.max(0, Math.min(1, (now - t0) / dur));   // rAF time can precede t0
+    el.textContent = fmt.format(Math.round(from + (value - from) * (1 - (1 - p) ** 3)));
+    if (p < 1) el._raf = requestAnimationFrame(step);
+  };
+  el._raf = requestAnimationFrame(step);
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+/* ---------- theme (light / dark / system) ---------- */
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+function savedTheme() { try { return localStorage.getItem('theme') || 'system'; } catch { return 'system'; } }
+function applyTheme(theme) {
+  const dark = theme === 'dark' || (theme === 'system' && darkQuery.matches);
+  document.documentElement.classList.toggle('dark', dark);
+  $('meta[name="theme-color"]').content = dark ? '#0a0a0a' : '#ffffff';
+  document.querySelectorAll('[data-theme-set]').forEach(b => b.setAttribute('aria-checked', b.dataset.themeSet === theme));
+}
+function setTheme(theme) {
+  try { localStorage.setItem('theme', theme); } catch {}
+  applyTheme(theme);
+}
+darkQuery.addEventListener('change', () => { if (savedTheme() === 'system') applyTheme('system'); });
+
+function toggleMenu(open) {
+  const menu = $('#theme-menu');
+  open = open ?? menu.hidden;
+  menu.hidden = !open;
+  $('#theme-btn').setAttribute('aria-expanded', open);
+  if (open) (menu.querySelector('[aria-checked="true"]') || menu.querySelector('.menu-item')).focus();
+}
+$('#theme-btn').addEventListener('click', () => toggleMenu());
+$('#theme-menu').addEventListener('click', e => {
+  const item = e.target.closest('[data-theme-set]');
+  if (!item) return;
+  setTheme(item.dataset.themeSet);
+  toggleMenu(false);
+  $('#theme-btn').focus();
+});
+$('#theme-menu').addEventListener('keydown', e => {
+  const items = [...document.querySelectorAll('#theme-menu .menu-item')];
+  const i = items.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+});
+
+/* ---------- data ---------- */
+const data = window.MODELS_DATA;
+const builds = [];
+const buildById = {};
+
+function indexData() {
+  for (const lab of data.labs) for (const m of lab.models) { m.lab = lab; m.builds = []; }
+  for (const b of data.builds) {
+    const lab = data.labs.find(l => l.id === b.lab);
+    const m = lab && lab.models.find(x => x.slug === b.model);
+    if (!m) continue;
+    const build = { ...b, m, lab, path: `${b.id}/index.html` };
+    m.builds.push(build);
+    builds.push(build);
+    buildById[b.id] = build;
+  }
+}
+
+const effortLabel = e => data.efforts[e] || e;
+const isConfigurable = m => !Array.isArray(m.efforts);
+const buildLabel = b => `${b.m.name} · ${effortLabel(b.effort)}`;
+// Catalog efforts plus any effort someone actually built, in canonical order.
+function effortsOf(m) {
+  const set = new Set(isConfigurable(m) ? [] : m.efforts);
+  for (const b of m.builds) set.add(b.effort);
+  return Object.keys(data.efforts).filter(e => set.has(e));
+}
+
+/* ---------- state + URL ---------- */
+const state = { q: '', effort: 'all', lab: 'all', builtOnly: false, selected: [] };
+let compareIds = [];
+
+function readUrl() {
+  const p = new URLSearchParams(location.search);
+  state.q = p.get('q') || '';
+  state.effort = data.efforts[p.get('effort')] ? p.get('effort') : 'all';
+  state.lab = data.labs.some(l => l.id === p.get('lab')) ? p.get('lab') : 'all';
+  state.builtOnly = p.get('built') === '1';
+  return [...new Set((p.get('compare') || '').split(','))].filter(id => buildById[id]).slice(0, MAX_COMPARE);
+}
+function listUrl() {
+  const p = new URLSearchParams();
+  if (state.q) p.set('q', state.q);
+  if (state.effort !== 'all') p.set('effort', state.effort);
+  if (state.lab !== 'all') p.set('lab', state.lab);
+  if (state.builtOnly) p.set('built', '1');
+  const qs = p.toString();
+  return qs ? `?${qs}` : location.pathname;
+}
+const compareUrl = ids => `?compare=${ids.join(',')}`;
+
+function route() {
+  const ids = readUrl();
+  if (ids.length) showCompare(ids);
+  else showList();
+}
+function goList() {
+  if (history.state && history.state.fromList) history.back();
+  else { history.pushState(null, '', listUrl()); route(); }
+}
+function goCompare(ids) {
+  history.pushState({ fromList: true }, '', compareUrl(ids));
+  scrollTo(0, 0);
+  route();
+}
+
+/* ---------- list view ---------- */
+function renderFilters() {
+  const used = new Set(data.labs.flatMap(l => l.models.flatMap(effortsOf)));
+  const builtAt = e => builds.filter(b => b.effort === e).length;
+  $('#effort-filter').innerHTML = ['all', ...Object.keys(data.efforts).filter(e => used.has(e))].map(e => {
+    const n = e === 'all' ? builds.length : builtAt(e);
+    return `<button type="button" class="tab" data-effort="${e}" aria-pressed="false">${e === 'all' ? 'All' : esc(effortLabel(e))}`
+      + `${n ? `<span class="num" title="${n} built">${n}</span>` : ''}</button>`;
+  }).join('');
+  $('#lab-filter').innerHTML = [`<button type="button" class="tab" data-lab="all" aria-pressed="false">All</button>`,
+    ...data.labs.map(l => `<button type="button" class="tab" data-lab="${esc(l.id)}" style="--lab:${esc(l.color)}" aria-pressed="false"><span class="dot"></span>${esc(l.name)}</button>`),
+  ].join('');
+}
+
+function chipHtml(m, effort, dim) {
+  const b = m.builds.find(x => x.effort === effort);
+  if (b) {
+    const on = state.selected.includes(b.id);
+    return `<button type="button" class="chip chip-built${dim ? ' dim' : ''}" data-build="${esc(b.id)}" aria-pressed="${on}" title="Select to compare">`
+      + `<span class="checkbox">${icon('check')}</span>${esc(effortLabel(effort))}</button>`;
+  }
+  return `<a class="chip chip-open${dim ? ' dim' : ''}" href="${newBuildUrl(`${m.lab.id}/${m.slug}-${effort}`)}" target="_blank" rel="noopener" `
+    + `title="No ${esc(effortLabel(effort))} build yet. Add one on GitHub.">${icon('plus')}${esc(effortLabel(effort))}</a>`;
+}
+
+function rowHtml(m) {
+  const f = state.effort;
+  let efforts = effortsOf(m);
+  // Configurable models accept any effort, so the filtered effort is always an open slot.
+  if (isConfigurable(m) && f !== 'all' && !efforts.includes(f)) efforts = Object.keys(data.efforts).filter(e => e === f || efforts.includes(e));
+  const chips = efforts.map(e => chipHtml(m, e, f !== 'all' && e !== f));
+  if (isConfigurable(m) && f === 'all') {
+    chips.push(`<a class="chip chip-open" href="${newBuildUrl(`${m.lab.id}/${m.slug}-EFFORT`)}" target="_blank" rel="noopener" title="Rename EFFORT to the effort you used">${icon('plus')}Add a build</a>`);
+  }
+  const n = m.builds.length;
+  return `<li class="row">
+    <span class="avatar" aria-hidden="true">${esc(m.lab.name[0])}</span>
+    <div>
+      <div class="row-title">${esc(m.name)}${n ? `<span class="badge badge-secondary">${n} build${n > 1 ? 's' : ''}</span>` : ''}</div>
+      <div class="row-sub">${esc(m.position)}${isConfigurable(m) ? ' · effort configurable' : ''}</div>
+    </div>
+    <div class="chips">${chips.join('')}</div>
+  </li>`;
+}
+
+function renderList() {
+  const { effort, lab, builtOnly } = state;
+  const tokens = state.q.toLowerCase().split(/\s+/).filter(Boolean);
+  let html = '', nModels = 0, nBuilds = 0;
+
+  for (const L of data.labs) {
+    if (lab !== 'all' && L.id !== lab) continue;
+    const rows = [];
+    for (const m of L.models) {
+      const efforts = effortsOf(m);
+      const hay = [m.name, L.name, m.position, m.slug, ...(m.aliases || []), ...efforts.map(effortLabel)].join(' ').toLowerCase();
+      if (!tokens.every(t => hay.includes(t))) continue;
+      if (effort !== 'all' && !efforts.includes(effort) && !isConfigurable(m)) continue;
+      const matching = m.builds.filter(b => effort === 'all' || b.effort === effort);
+      if (builtOnly && !matching.length) continue;
+      rows.push(rowHtml(m));
+      nModels++;
+      nBuilds += matching.length;
+    }
+    if (rows.length) {
+      html += `<section class="lab-group" style="--lab:${esc(L.color)}">
+        <h3 class="lab-head"><span class="dot"></span><strong>${esc(L.name)}</strong>${rows.length} model${rows.length > 1 ? 's' : ''}</h3>
+        <ul class="card rows">${rows.join('')}</ul></section>`;
+    }
+  }
+
+  const filtered = state.q || effort !== 'all' || lab !== 'all' || builtOnly;
+  $('#results').innerHTML = html || `<div class="empty">
+      <div class="empty-icon">${icon('search-x')}</div>
+      <h3>No models found</h3>
+      <p>Nothing matches${state.q ? ` “${esc(state.q)}”` : ''} with these filters. Model missing? Add it to <code>models.json</code> in a pull request.</p>
+    </div>`;
+  $('#results-count').innerHTML = `<strong>${nModels}</strong> model${nModels === 1 ? '' : 's'} · <strong>${nBuilds}</strong> build${nBuilds === 1 ? '' : 's'}`;
+  $('#clear-filters').hidden = !filtered;
+  document.querySelectorAll('#effort-filter .tab').forEach(t => t.setAttribute('aria-pressed', t.dataset.effort === effort));
+  document.querySelectorAll('#lab-filter .tab').forEach(t => t.setAttribute('aria-pressed', t.dataset.lab === lab));
+  $('#built-only').setAttribute('aria-checked', builtOnly);
+}
+
+function setFilter(patch) {
+  Object.assign(state, patch);
+  history.replaceState(history.state, '', listUrl());
+  renderList();
+}
+
+function toggleSelect(id) {
+  const i = state.selected.indexOf(id);
+  if (i >= 0) state.selected.splice(i, 1);
+  else if (state.selected.length >= MAX_COMPARE) return toast(`You can compare up to ${MAX_COMPARE} builds at once`);
+  else state.selected.push(id);
+  syncSelection();
+}
+// Update chips in place so keyboard focus stays where it is.
+function syncSelection() {
+  document.querySelectorAll('.chip-built').forEach(c => c.setAttribute('aria-pressed', state.selected.includes(c.dataset.build)));
+  renderTray();
+}
+function renderTray() {
+  const n = state.selected.length;
+  const show = n > 0 && !$('#view-list').hidden;
+  $('#tray').hidden = !show;
+  document.body.classList.toggle('has-tray', show);
+  $('#tray-count').textContent = `${n} of ${MAX_COMPARE}`;
+  $('#tray-items').innerHTML = state.selected.map(id => {
+    const b = buildById[id];
+    return `<span class="badge badge-secondary" style="--lab:${esc(b.lab.color)}"><span class="dot"></span>${esc(buildLabel(b))}`
+      + `<button type="button" data-unselect="${esc(id)}" aria-label="Remove ${esc(buildLabel(b))}">${icon('x')}</button></span>`;
+  }).join('');
+  $('#tray-go').innerHTML = `${n === 1 ? `${icon('play')}Play` : `Compare ${n}`}${icon('arrow-right')}`;
+}
+
+function showList() {
+  if (compareIds.length) state.selected = [...compareIds];   // coming back from a comparison keeps the picks
+  compareIds = [];
+  $('#compare-grid').innerHTML = '';                          // unloads the running games
+  $('#view-compare').hidden = true;
+  $('#view-list').hidden = false;
+  $('#q').value = state.q;
+  document.title = 'Compare AI Models';
+  renderList();
+  renderTray();
+}
+
+/* ---------- compare view ---------- */
+function cardHtml(b) {
+  const kb = b.bytes / 1024;
+  return `<article class="card build-card" data-id="${esc(b.id)}" style="--lab:${esc(b.lab.color)}">
+    <header class="build-head">
+      <span class="avatar" aria-hidden="true">${esc(b.lab.name[0])}</span>
+      <div class="build-title"><h3 class="card-title">${esc(b.m.name)}</h3><p>${esc(b.lab.name)} · ${esc(effortLabel(b.effort))} effort</p></div>
+      <span class="badge badge-outline tag" hidden>${icon('trophy')}Most played</span>
+      <button type="button" class="btn btn-ghost btn-icon btn-sm" data-remove="${esc(b.id)}" aria-label="Remove ${esc(buildLabel(b))} from comparison" title="Remove">${icon('x')}</button>
+    </header>
+    <div class="frame">
+      <iframe src="${esc(b.path)}" title="${esc(buildLabel(b))}: Tiny 3D Island" loading="lazy"></iframe>
+      <button class="overlay" type="button" aria-label="Play ${esc(buildLabel(b))} here"><span>${icon('play')}Click to play here</span></button>
+    </div>
+    <div class="playing-note">Playing. Click anywhere outside the island to scroll again.</div>
+    <dl class="metrics">
+      <div><dt>Plays</dt><dd data-k="plays">—</dd></div>
+      <div><dt>Size</dt><dd>${b.bytes ? `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB` : '—'}</dd></div>
+      <div><dt>Lines</dt><dd>${b.lines ? fmt.format(b.lines) : '—'}</dd></div>
+      <div><dt>three.js</dt><dd>${esc(b.three || '—')}</dd></div>
+    </dl>
+    <p class="card-meta">${esc(b.m.position)}${b.by ? ` · added by <a href="https://github.com/${esc(b.by)}" target="_blank" rel="noopener">@${esc(b.by)}</a>` : ''}</p>
+    <div class="build-actions">
+      <a class="btn btn-default" href="${esc(b.path)}" target="_blank" rel="noopener" data-play="${esc(b.id)}">${icon('external')}Open full page</a>
+      <a class="btn btn-outline" href="${sourceUrl(b.path)}" target="_blank" rel="noopener">${icon('code')}Source</a>
+    </div>
+  </article>`;
+}
+const cardEl = id => document.querySelector(`.build-card[data-id="${CSS.escape(id)}"]`);
+
+function showCompare(ids) {
+  compareIds = ids;
+  $('#view-list').hidden = true;
+  $('#view-compare').hidden = false;
+  renderTray();
+  const one = ids.length === 1;
+  $('#compare-title').textContent = one ? buildLabel(buildById[ids[0]]) : `Comparing ${ids.length} builds`;
+  document.title = `${one ? buildLabel(buildById[ids[0]]) : ids.map(id => buildById[id].m.name).join(' vs ')} · Compare AI Models`;
+  $('#add-more').hidden = ids.length >= MAX_COMPARE || ids.length >= builds.length;
+
+  const grid = $('#compare-grid');
+  grid.dataset.n = ids.length;
+  grid.style.setProperty('--cols', ids.length);
+  grid.innerHTML = ids.map(id => cardHtml(buildById[id])).join('');
+  grid.querySelectorAll('.frame').forEach(f => resizer.observe(f));
+  renderPlays();
+  refreshCounters();
+}
+
+function removeFromCompare(id) {
+  const ids = compareIds.filter(x => x !== id);
+  if (!ids.length) { state.selected = []; compareIds = []; return goList(); }
+  history.replaceState(history.state, '', compareUrl(ids));
+  showCompare(ids);
+}
+
+function activateCard(card) {
+  deactivateCards();
+  card.classList.add('is-active');
+  const frame = $('iframe', card);
+  frame.focus();
+  try { frame.contentWindow.focus(); } catch {}
+  recordPlay(card.dataset.id);
+}
+function deactivateCards() {
+  document.querySelectorAll('.build-card.is-active').forEach(c => c.classList.remove('is-active'));
+}
+
+// Scale the fixed-size iframes to whatever width their card has.
+const resizer = new ResizeObserver(entries => {
+  for (const e of entries) e.target.style.setProperty('--s', e.contentRect.width / PREVIEW_WIDTH);
+});
+
+/* ---------- live counters (Abacus) ---------- */
+async function counter(action, key) {
+  const res = await fetch(`${COUNTER_API}/${action}/${COUNTER_NS}/${key}`, { cache: 'no-store' });
+  if (res.status === 404) return 0;           // key not created yet
+  if (!res.ok) throw new Error(`counter ${res.status}`);
+  return (await res.json()).value;
+}
+const playKey = id => `play-${id.replace('/', '-')}`;
+
+const plays = {};
+let totalPlays = null;
+let lastSync = 0;
+let countersOk = false;
+let githubOk = false;
+
+function renderPlays() {
+  setNum($('#stat-plays'), totalPlays);
+  const known = compareIds.filter(id => plays[id] != null);
+  for (const id of known) setNum($('[data-k="plays"]', cardEl(id)), plays[id]);
+  const ranked = [...known].sort((a, b) => plays[b] - plays[a]);
+  const leader = ranked[0];
+  const clear = ranked.length > 1 && plays[leader] > 0 && plays[leader] > plays[ranked[1]];
+  for (const id of compareIds) {
+    const tag = cardEl(id) && $('.tag', cardEl(id));
+    if (tag) tag.hidden = !(clear && id === leader);
+  }
+}
+
+const counted = new Set();
+async function recordPlay(id) {
+  if (counted.has(id)) return;                 // one play per build per page load
+  counted.add(id);
+  const [mine, total] = await Promise.allSettled([counter('hit', playKey(id)), counter('hit', 'plays-total')]);
+  if (mine.status === 'fulfilled') plays[id] = mine.value;
+  if (total.status === 'fulfilled') totalPlays = total.value;
+  renderPlays();
+  if (mine.status === 'fulfilled' || total.status === 'fulfilled') { countersOk = true; markSynced(true); }
+}
+
+async function refreshCounters(first = false) {
+  const ids = [...compareIds];
+  // Count one visit per browser session; afterwards just read the value.
+  const visitAction = first && !session.get('visited') ? 'hit' : 'get';
+  const [visits, total, ...perBuild] = await Promise.allSettled([
+    counter(visitAction, 'visits'),
+    counter('get', 'plays-total'),
+    ...ids.map(id => counter('get', playKey(id))),
+  ]);
+  if (visits.status === 'fulfilled') {
+    if (visitAction === 'hit') session.set('visited', true);
+    setNum($('#stat-visits'), visits.value);
+  }
+  if (total.status === 'fulfilled') totalPlays = total.value;
+  perBuild.forEach((r, i) => { if (r.status === 'fulfilled') plays[ids[i]] = r.value; });
+  renderPlays();
+  countersOk = [visits, total, ...perBuild].some(r => r.status === 'fulfilled');
+  markSynced(countersOk);
+}
+
+/* ---------- GitHub ---------- */
+async function refreshGitHub() {
+  let gh = session.get('gh');
+  try {
+    if (!gh || Date.now() - gh.t > 60_000) {
+      const res = await fetch(`https://api.github.com/repos/${REPO}`, { headers: { Accept: 'application/vnd.github+json' } });
+      if (!res.ok) throw new Error(`github ${res.status}`);
+      const j = await res.json();
+      gh = { t: Date.now(), stars: j.stargazers_count, forks: j.forks_count };
+      session.set('gh', gh);
+    }
+    githubOk = true;
+  } catch {
+    githubOk = false;
+    if (!gh) return markSynced(false);         // nothing cached to show
+  }
+  setNum($('#stat-stars'), gh.stars);
+  setNum($('#stat-forks'), gh.forks);
+  $('#gh-stars').textContent = fmt.format(gh.stars);
+  markSynced(githubOk);
+}
+
+/* ---------- live status ---------- */
+function markSynced(ok) {
+  if (ok) lastSync = Date.now();
+  const online = countersOk || githubOk;
+  $('#announce').classList.toggle('offline', !online);
+  $('#live-label').textContent = online ? 'Live' : 'Offline';
+  if (!online && !lastSync) $('#updated').textContent = 'stats unavailable';
+  else tick();
+}
+function tick() {
+  if (lastSync) $('#updated').textContent = `updated ${timeAgo(lastSync)}`;
+}
+
+/* ---------- events ---------- */
+$('#q').addEventListener('input', e => setFilter({ q: e.target.value.trim() }));
+$('#q').addEventListener('keydown', e => {
+  if (e.key === 'Escape' && e.target.value) { e.target.value = ''; setFilter({ q: '' }); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#theme-menu').hidden) { toggleMenu(false); $('#theme-btn').focus(); }
+  if (e.key === '/' && !$('#view-list').hidden && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) {
+    e.preventDefault();
+    $('#q').focus();
+  }
+});
+$('#effort-filter').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (tab) setFilter({ effort: tab.dataset.effort });
+});
+$('#lab-filter').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (tab) setFilter({ lab: tab.dataset.lab });
+});
+$('#built-only').addEventListener('click', () => setFilter({ builtOnly: !state.builtOnly }));
+$('#clear-filters').addEventListener('click', () => {
+  $('#q').value = '';
+  setFilter({ q: '', effort: 'all', lab: 'all', builtOnly: false });
+});
+$('#results').addEventListener('click', e => {
+  const chip = e.target.closest('.chip-built');
+  if (chip) toggleSelect(chip.dataset.build);
+});
+$('#compare-all').addEventListener('click', () => goCompare(builds.map(b => b.id)));
+
+$('#tray-items').addEventListener('click', e => {
+  const btn = e.target.closest('[data-unselect]');
+  if (btn) toggleSelect(btn.dataset.unselect);
+});
+$('#tray-clear').addEventListener('click', () => { state.selected = []; syncSelection(); });
+$('#tray-go').addEventListener('click', () => goCompare(state.selected));
+
+document.querySelectorAll('[data-nav="list"]').forEach(a => a.addEventListener('click', e => {
+  if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault();
+  if ($('#view-compare').hidden) return scrollTo({ top: 0, behavior: 'smooth' });
+  goList();
+}));
+$('#add-more').addEventListener('click', goList);
+$('#copy-link').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(location.href); toast('Link copied. Send it to anyone.'); }
+  catch { toast('Copy the address bar to share this comparison'); }
+});
+$('#compare-grid').addEventListener('click', e => {
+  const overlay = e.target.closest('.overlay');
+  if (overlay) return activateCard(overlay.closest('.build-card'));
+  const remove = e.target.closest('[data-remove]');
+  if (remove) return removeFromCompare(remove.dataset.remove);
+  const open = e.target.closest('[data-play]');
+  if (open) recordPlay(open.dataset.play);
+});
+// Clicks inside an active iframe never reach this document, so any click here is "outside".
+document.addEventListener('pointerdown', e => {
+  if (!e.target.closest('.build-card.is-active .frame')) deactivateCards();
+  if (!e.target.closest('.menu-wrap')) toggleMenu(false);
+});
+window.addEventListener('popstate', route);
+
+/* ---------- static links ---------- */
+for (const id of ['gh-link', 'footer-repo']) $('#' + id).href = repoUrl;
+$('#footer-repo').textContent = `github.com/${REPO}`;
+$('#fork-btn').href = `${repoUrl}/fork`;
+$('#contributing-btn').href = sourceUrl('CONTRIBUTING.md');
+
+/* ---------- boot ---------- */
+hydrateIcons();
+applyTheme(savedTheme());
+if (!data) {
+  $('#results').innerHTML = `<div class="empty"><div class="empty-icon">${icon('search-x')}</div><h3>No model data</h3>
+    <p><code>models.js</code> is missing. Run <code>node scripts/sync-builds.mjs</code> in the repo folder to generate it.</p></div>`;
+} else {
+  indexData();
+  $('#n-models').textContent = data.labs.reduce((n, l) => n + l.models.length, 0);
+  const compareAll = $('#compare-all');
+  compareAll.hidden = builds.length < 2 || builds.length > MAX_COMPARE;
+  compareAll.innerHTML = `Compare all ${builds.length}${icon('arrow-right')}`;
+  renderFilters();
+  route();
+  if (data.promptText) {
+    $('#prompt-text').textContent = data.promptText;
+    $('#prompt-panel').hidden = false;
+  }
+  refreshCounters(true);
+  refreshGitHub();
+  setInterval(() => { if (!document.hidden) refreshCounters(); }, COUNTER_POLL_MS);
+  setInterval(() => { if (!document.hidden) refreshGitHub(); }, GITHUB_POLL_MS);
+  setInterval(tick, 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && Date.now() - lastSync > COUNTER_POLL_MS) { refreshCounters(); refreshGitHub(); }
+  });
+}
+</script>
+</body>
+</html>

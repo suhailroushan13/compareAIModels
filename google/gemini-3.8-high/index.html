@@ -1,0 +1,2671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Tiny 3D Island</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #1a1c23;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      color: #ffffff;
+    }
+    #game-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 1;
+    }
+
+    /* HUD Elements */
+    .hud-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    /* Crystal Counter */
+    .crystal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(18, 24, 38, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 10px 20px;
+      border-radius: 999px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      pointer-events: auto;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .crystal-badge.pulse {
+      transform: scale(1.1);
+      border-color: #64d2ff;
+      box-shadow: 0 0 24px rgba(100, 210, 255, 0.6);
+    }
+    .crystal-icon {
+      width: 24px;
+      height: 24px;
+      filter: drop-shadow(0 0 6px #60e7ff);
+      animation: floatIcon 3s ease-in-out infinite alternate;
+    }
+    @keyframes floatIcon {
+      0% { transform: translateY(-1px) rotate(-6deg); }
+      100% { transform: translateY(2px) rotate(6deg); }
+    }
+    .crystal-text {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #f0f6fc;
+      text-transform: uppercase;
+    }
+    .crystal-count {
+      color: #64d2ff;
+      font-size: 18px;
+    }
+
+    /* Minimap / Compass */
+    .minimap-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+      pointer-events: auto;
+    }
+    .minimap-card {
+      width: 130px;
+      height: 130px;
+      background: rgba(18, 24, 38, 0.8);
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 50%;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+    #minimap-canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: block;
+    }
+    .compass-n {
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: 800;
+      color: #ff5c5c;
+      letter-spacing: 1px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+
+    /* Settings Button & Panel */
+    .btn-icon {
+      background: rgba(18, 24, 38, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      color: #e2e8f0;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+    }
+    .btn-icon:hover {
+      background: rgba(45, 55, 75, 0.9);
+      border-color: rgba(255, 255, 255, 0.35);
+      transform: translateY(-2px);
+    }
+    .btn-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    /* Center Prompts */
+    .interaction-prompt {
+      position: absolute;
+      top: 65%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(8px);
+      padding: 10px 22px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+    .interaction-prompt.visible {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .key-badge {
+      background: #38bdf8;
+      color: #0f172a;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      box-shadow: 0 2px 6px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Bottom Bar */
+    .bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      width: 100%;
+    }
+    .controls-pill {
+      background: rgba(18, 24, 38, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(10px);
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #94a3b8;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      letter-spacing: 0.3px;
+      pointer-events: auto;
+    }
+    .controls-pill span {
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+
+    /* Modal Panels */
+    .settings-modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.95);
+      width: 330px;
+      background: rgba(18, 24, 38, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 24px;
+      z-index: 100;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .settings-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: 0.5px;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+    }
+    .close-btn:hover { color: #f8fafc; }
+
+    .setting-row {
+      margin-bottom: 18px;
+    }
+    .setting-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .segmented-control {
+      display: flex;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 10px;
+      padding: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .segmented-option {
+      flex: 1;
+      text-align: center;
+      padding: 6px 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .segmented-option.active {
+      background: #38bdf8;
+      color: #0f172a;
+      box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+    }
+
+    .slider-container input[type="range"] {
+      width: 100%;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+
+    .action-btn {
+      width: 100%;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 8px;
+    }
+    .action-btn:hover {
+      background: rgba(239, 68, 68, 0.3);
+      color: #fff;
+    }
+
+    /* Victory Overlay */
+    .victory-modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      width: 360px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 2px solid rgba(100, 210, 255, 0.5);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-radius: 24px;
+      padding: 32px 24px;
+      text-align: center;
+      z-index: 200;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 50px rgba(56, 189, 248, 0.3);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .victory-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .victory-title {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60e7ff 0%, #ffffff 50%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+    .victory-subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(37, 99, 235, 0.45);
+      transition: all 0.2s ease;
+      letter-spacing: 0.5px;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.65);
+    }
+
+    /* Interior Banner Indicator */
+    .interior-badge {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(18, 24, 38, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .interior-badge.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD Interface -->
+  <div class="hud-container">
+    <div class="top-bar">
+      <!-- Crystal Counter -->
+      <div class="crystal-badge" id="crystal-counter">
+        <svg class="crystal-icon" viewBox="0 0 24 24">
+          <polygon points="12,2 20,8 12,22 4,8" fill="#38bdf8" stroke="#ffffff" stroke-width="1.2" />
+          <polygon points="12,2 12,22 4,8" fill="#0284c7" opacity="0.6" />
+        </svg>
+        <span class="crystal-text">Crystals: <span class="crystal-count" id="crystal-count-text">0 / 5</span></span>
+      </div>
+
+      <!-- Minimap & Settings button -->
+      <div class="minimap-wrapper">
+        <div class="minimap-card">
+          <span class="compass-n">N</span>
+          <canvas id="minimap-canvas" width="130" height="130"></canvas>
+        </div>
+        <button class="btn-icon" id="settings-toggle-btn" title="Game Settings">
+          <svg viewBox="0 0 24 24">
+            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Interior indicator -->
+    <div class="interior-badge" id="interior-badge">
+      <span>Cozy Cabin Interior · Press [ESC] to Exit</span>
+    </div>
+
+    <!-- Prompt in center -->
+    <div class="interaction-prompt" id="interaction-prompt">
+      <span class="key-badge">E</span>
+      <span id="prompt-text">Open Door</span>
+    </div>
+
+    <!-- Controls footer -->
+    <div class="bottom-bar">
+      <div class="controls-pill">
+        <span>WASD</span> Move · <span>Shift</span> Sprint · <span>Space</span> Jump · <span>E</span> Interact · <span>Drag</span> Rotate · <span>Scroll</span> Zoom
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="settings-modal" id="settings-modal">
+    <div class="modal-header">
+      <h3>Island Settings</h3>
+      <button class="close-btn" id="settings-close-btn">&times;</button>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-label">Shadows</div>
+      <div class="segmented-control" id="shadow-control">
+        <div class="segmented-option" data-value="off">OFF</div>
+        <div class="segmented-option active" data-value="on">ON</div>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-label">Quality</div>
+      <div class="segmented-control" id="quality-control">
+        <div class="segmented-option" data-value="low">Low</div>
+        <div class="segmented-option" data-value="med">Medium</div>
+        <div class="segmented-option active" data-value="high">High</div>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-label">
+        <span>Day / Night Time</span>
+        <span id="time-display">12:00</span>
+      </div>
+      <div class="slider-container">
+        <input type="range" id="time-slider" min="0" max="24" step="0.1" value="12">
+      </div>
+    </div>
+
+    <button class="action-btn" id="reset-game-btn">Reset Game</button>
+  </div>
+
+  <!-- Victory Modal -->
+  <div class="victory-modal" id="victory-modal">
+    <h2 class="victory-title">Island Complete!</h2>
+    <p class="victory-subtitle">You have gathered all 5 ancient glowing crystals and harmonized the floating sanctuary island.</p>
+    <button class="btn-primary" id="restart-game-btn">Explore Again</button>
+  </div>
+
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Main Game Script -->
+  <script>
+    /* ==========================================================================
+       TINY 3D ISLAND - COMPLETE CODEBASE ARCHITECTURE
+       Sections:
+       1. Audio Synthesizer (Zero asset web-audio sound effects)
+       2. Game State & Configuration
+       3. Input System
+       4. Scene, Sky, Lighting & Day/Night System
+       5. Island Terrain & Water
+       6. Low-Poly Architecture (House, Interior Furnishings, Porch)
+       7. Natural Environment (Trees, Rocks, Flowers, Grass, Clouds, Particles)
+       8. Collectibles (5 Faceted Glowing Crystals)
+       9. Player System (Model, Procedural Walk/Run/Idle Animation, Physics)
+       10. Camera System (Third-Person Orbit, Smooth Interior Cutaway)
+       11. Collision Detection & Math Utilities
+       12. UI & Minimap System
+       13. Main Game Loop Initialization
+       ========================================================================== */
+
+    // --- 1. PROCEDURAL WEB AUDIO SYNTHESIZER ---
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playCrystalChime() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        // Pentatonic magical arpeggio
+        const freqs = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+        freqs.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+
+          gain.gain.setValueAtTime(0.001, now + idx * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.2, now + idx * 0.06 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.06 + 0.8);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now + idx * 0.06);
+          osc.stop(now + idx * 0.06 + 0.85);
+        });
+      }
+      playJump() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(350, now + 0.15);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      }
+      playDoor() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(90, now);
+        osc.frequency.linearRampToValueAtTime(140, now + 0.25);
+
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.32);
+      }
+      playFootstep() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(70 + Math.random() * 20, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.06);
+
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      }
+      playVictory() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const chord = [392.00, 523.25, 659.25, 783.99, 1046.50];
+        chord.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + i * 0.1);
+          gain.gain.setValueAtTime(0.18, now + i * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 1.5);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.1);
+          osc.stop(now + i * 0.1 + 1.6);
+        });
+      }
+    }
+    const audio = new SoundFX();
+
+    // --- 2. GAME STATE & CONFIGURATION ---
+    const CONFIG = {
+      islandRadius: 36,
+      islandCenter: new THREE.Vector2(0, 0),
+      waterRadius: 180,
+      gravity: -28,
+      walkSpeed: 6.8,
+      sprintSpeed: 11.5,
+      jumpVelocity: 9.8,
+      mouseSensitivity: 0.0035,
+      timeSpeed: 0.03, // 24hr cycle over time
+    };
+
+    const gameState = {
+      crystalsCollected: 0,
+      totalCrystals: 5,
+      isDoorOpen: false,
+      isInsideHouse: false,
+      timeOfDay: 13.5, // 0 - 24 hours (12 = noon, 0 = midnight)
+      autoTimeProgression: true,
+      shadowsEnabled: true,
+      quality: 'high',
+      isCompleted: false,
+    };
+
+    // --- 3. INPUT SYSTEM ---
+    class InputController {
+      constructor() {
+        this.keys = {};
+        this.mouse = {
+          isDown: false,
+          prevX: 0,
+          prevY: 0,
+          deltaX: 0,
+          deltaY: 0,
+        };
+        this.zoomDelta = 0;
+        this.interactPressed = false;
+        this.escapePressed = false;
+
+        this._bindEvents();
+      }
+
+      _bindEvents() {
+        window.addEventListener('keydown', (e) => {
+          this.keys[e.code] = true;
+          if (e.code === 'KeyE') this.interactPressed = true;
+          if (e.code === 'Escape') this.escapePressed = true;
+          audio.init();
+        });
+
+        window.addEventListener('keyup', (e) => {
+          this.keys[e.code] = false;
+        });
+
+        window.addEventListener('mousedown', (e) => {
+          if (e.target.closest('.hud-container') && !e.target.classList.contains('hud-container')) return;
+          this.mouse.isDown = true;
+          this.mouse.prevX = e.clientX;
+          this.mouse.prevY = e.clientY;
+          audio.init();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!this.mouse.isDown) return;
+          this.mouse.deltaX += e.clientX - this.mouse.prevX;
+          this.mouse.deltaY += e.clientY - this.mouse.prevY;
+          this.mouse.prevX = e.clientX;
+          this.mouse.prevY = e.clientY;
+        });
+
+        window.addEventListener('mouseup', () => {
+          this.mouse.isDown = false;
+        });
+
+        window.addEventListener('wheel', (e) => {
+          this.zoomDelta += Math.sign(e.deltaY);
+        }, { passive: true });
+
+        // Touch support for mobile viewing
+        window.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            this.mouse.isDown = true;
+            this.mouse.prevX = e.touches[0].clientX;
+            this.mouse.prevY = e.touches[0].clientY;
+          }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+          if (!this.mouse.isDown || e.touches.length !== 1) return;
+          this.mouse.deltaX += e.touches[0].clientX - this.mouse.prevX;
+          this.mouse.deltaY += e.touches[0].clientY - this.mouse.prevY;
+          this.mouse.prevX = e.touches[0].clientX;
+          this.mouse.prevY = e.touches[0].clientY;
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+          this.mouse.isDown = false;
+        });
+      }
+
+      resetFrame() {
+        this.mouse.deltaX = 0;
+        this.mouse.deltaY = 0;
+        this.zoomDelta = 0;
+        this.interactPressed = false;
+        this.escapePressed = false;
+      }
+
+      get forward() {
+        return (this.keys['KeyW'] || this.keys['ArrowUp']) ? 1 : (this.keys['KeyS'] || this.keys['ArrowDown']) ? -1 : 0;
+      }
+      get strafe() {
+        return (this.keys['KeyD'] || this.keys['ArrowRight']) ? 1 : (this.keys['KeyA'] || this.keys['ArrowLeft']) ? -1 : 0;
+      }
+      get isSprinting() {
+        return !!this.keys['ShiftLeft'] || !!this.keys['ShiftRight'];
+      }
+      get isJumping() {
+        return !!this.keys['Space'];
+      }
+    }
+    const input = new InputController();
+
+    // --- 11 (Early helper): TERRAIN HEIGHT MATH & COLLISION BOUNDS ---
+    // Smooth parametric height function for floating island
+    function getTerrainHeight(x, z) {
+      const dist = Math.hypot(x, z);
+      const rad = CONFIG.islandRadius;
+      if (dist > rad + 4) return -15; // deep water cliff
+
+      // Base plateau elevation
+      let h = 2.4;
+
+      // House clearing (around -6, -4)
+      const distHouse = Math.hypot(x - (-6), z - (-4));
+      if (distHouse < 9) {
+        h = 2.5; // flatten for house
+        return h;
+      }
+
+      // Gentle undulating rolling hills
+      h += Math.sin(x * 0.12) * Math.cos(z * 0.12) * 1.6;
+      h += Math.sin(x * 0.25 + 1.2) * 0.8;
+      h += Math.cos(z * 0.22 - 0.8) * 0.7;
+
+      // Small scenic peak near east coast (x: 18, z: 8)
+      const distHill1 = Math.hypot(x - 18, z - 8);
+      if (distHill1 < 14) {
+        h += Math.cos((distHill1 / 14) * (Math.PI / 2)) * 3.8;
+      }
+
+      // Gentle mound near south coast (x: -12, z: 20)
+      const distHill2 = Math.hypot(x - (-12), z - 20);
+      if (distHill2 < 12) {
+        h += Math.cos((distHill2 / 12) * (Math.PI / 2)) * 2.2;
+      }
+
+      // Rim falloff down to sandy shore and rock cliffs
+      if (dist > rad * 0.7) {
+        const t = (dist - rad * 0.7) / (rad * 0.35);
+        h = THREE.MathUtils.lerp(h, -4.5, Math.min(1.0, t * t * 1.3));
+      }
+
+      return h;
+    }
+
+    // --- 4. SCENE, SKY, LIGHTING & DAY/NIGHT SYSTEM ---
+    class SceneManager {
+      constructor() {
+        this.canvas = document.getElementById('game-canvas');
+        this.renderer = new THREE.WebGLRenderer({
+          canvas: this.canvas,
+          antialias: true,
+          powerPreference: 'high-performance',
+        });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.05;
+
+        this.scene = new THREE.Scene();
+        this.scene.fog = new THREE.FogExp2(0xa0c8f0, 0.0075);
+
+        // Lighting
+        this.ambientLight = new THREE.HemisphereLight(0xddeeff, 0x3d4835, 0.65);
+        this.scene.add(this.ambientLight);
+
+        this.sunLight = new THREE.DirectionalLight(0xfff7e6, 1.3);
+        this.sunLight.castShadow = true;
+        this.sunLight.shadow.mapSize.width = 2048;
+        this.sunLight.shadow.mapSize.height = 2048;
+        this.sunLight.shadow.camera.near = 0.5;
+        this.sunLight.shadow.camera.far = 160;
+        const d = 42;
+        this.sunLight.shadow.camera.left = -d;
+        this.sunLight.shadow.camera.right = d;
+        this.sunLight.shadow.camera.top = d;
+        this.sunLight.shadow.camera.bottom = -d;
+        this.sunLight.shadow.bias = -0.0005;
+        this.scene.add(this.sunLight);
+
+        // Sun & Moon Visual Orbs
+        this.sunOrb = new THREE.Mesh(
+          new THREE.SphereGeometry(3.5, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0xfff0aa })
+        );
+        this.scene.add(this.sunOrb);
+
+        this.moonOrb = new THREE.Mesh(
+          new THREE.SphereGeometry(2.6, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0xe6f0ff })
+        );
+        this.scene.add(this.moonOrb);
+
+        // Starfield
+        this._createStarfield();
+
+        // Sky background dome
+        this._createSkyDome();
+
+        window.addEventListener('resize', () => this.onWindowResize());
+      }
+
+      _createStarfield() {
+        const starCount = 380;
+        const starGeo = new THREE.BufferGeometry();
+        const starPos = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+          const u = Math.random();
+          const v = Math.random();
+          const theta = u * 2.0 * Math.PI;
+          const phi = Math.acos(2.0 * v - 1.0);
+          const r = 160;
+          const sinPhi = Math.sin(phi);
+          starPos[i * 3] = r * sinPhi * Math.cos(theta);
+          starPos[i * 3 + 1] = Math.abs(r * Math.cos(phi)) + 15; // upper hemisphere
+          starPos[i * 3 + 2] = r * sinPhi * Math.sin(theta);
+        }
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        this.starMat = new THREE.PointsMaterial({
+          color: 0xffffff,
+          size: 1.5,
+          transparent: true,
+          opacity: 0.0,
+        });
+        this.stars = new THREE.Points(starGeo, this.starMat);
+        this.scene.add(this.stars);
+      }
+
+      _createSkyDome() {
+        // Gradient hemisphere
+        const skyGeo = new THREE.SphereGeometry(175, 24, 16);
+        const skyMat = new THREE.MeshBasicMaterial({
+          color: 0x82b4ea,
+          side: THREE.BackSide,
+        });
+        this.skyDome = new THREE.Mesh(skyGeo, skyMat);
+        this.scene.add(this.skyDome);
+      }
+
+      updateDayNight(timeOfDay) {
+        // timeOfDay: 0 - 24
+        // Angle: 12 is noon, 0 is midnight
+        const angle = ((timeOfDay - 6) / 24) * Math.PI * 2;
+        const radius = 120;
+        const sunX = Math.cos(angle) * radius;
+        const sunY = Math.sin(angle) * radius;
+        const sunZ = Math.sin(angle * 0.4) * 40;
+
+        this.sunLight.position.set(sunX, Math.max(sunY, -20), sunZ);
+        this.sunOrb.position.set(sunX * 1.2, sunY * 1.2, sunZ * 1.2);
+
+        this.moonOrb.position.set(-sunX * 1.2, -sunY * 1.2, -sunZ * 1.2);
+
+        // Solar height factor (-1 to 1)
+        const sunElevation = Math.sin(angle);
+
+        // Palettes
+        let skyColor, fogColor, sunColor, sunIntensity, hemiSky, hemiGround, starAlpha;
+
+        if (sunElevation > 0.25) {
+          // Full Day
+          const t = Math.min(1.0, (sunElevation - 0.25) / 0.75);
+          skyColor = new THREE.Color(0x6eb7f7).lerp(new THREE.Color(0x52a0f0), t);
+          fogColor = new THREE.Color(0xa7d2f9).lerp(new THREE.Color(0x91c4f5), t);
+          sunColor = new THREE.Color(0xfff6dc);
+          sunIntensity = 1.3;
+          hemiSky = new THREE.Color(0xdceeff);
+          hemiGround = new THREE.Color(0x405530);
+          starAlpha = 0;
+        } else if (sunElevation > -0.15) {
+          // Golden Hour / Sunset / Twilight
+          const t = (sunElevation - (-0.15)) / 0.4;
+          skyColor = new THREE.Color(0x272448).lerp(new THREE.Color(0xf59e6b), t);
+          fogColor = new THREE.Color(0x352b48).lerp(new THREE.Color(0xfbc08b), t);
+          sunColor = new THREE.Color(0xff7744).lerp(new THREE.Color(0xffbe6b), t);
+          sunIntensity = 0.9 * t + 0.2;
+          hemiSky = new THREE.Color(0x605075).lerp(new THREE.Color(0xf8d0a0), t);
+          hemiGround = new THREE.Color(0x221a22).lerp(new THREE.Color(0x5a4430), t);
+          starAlpha = (1 - t) * 0.7;
+        } else {
+          // Night
+          skyColor = new THREE.Color(0x0a0e1c);
+          fogColor = new THREE.Color(0x0e1428);
+          sunColor = new THREE.Color(0x5b7cb8); // moon silvery light
+          sunIntensity = 0.22;
+          hemiSky = new THREE.Color(0x1a2444);
+          hemiGround = new THREE.Color(0x0d121c);
+          starAlpha = 0.95;
+        }
+
+        this.skyDome.material.color.copy(skyColor);
+        this.scene.fog.color.copy(fogColor);
+        this.sunLight.color.copy(sunColor);
+        this.sunLight.intensity = sunIntensity;
+        this.ambientLight.color.copy(hemiSky);
+        this.ambientLight.groundColor.copy(hemiGround);
+        this.starMat.opacity = starAlpha;
+
+        this.sunOrb.visible = sunElevation > -0.1;
+        this.moonOrb.visible = sunElevation < 0.2;
+      }
+
+      onWindowResize() {
+        cameraController.camera.aspect = window.innerWidth / window.innerHeight;
+        cameraController.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+    }
+
+    // --- 5. ISLAND TERRAIN & WATER SYSTEM ---
+    class IslandEnvironment {
+      constructor(scene) {
+        this.scene = scene;
+        this.obstacles = []; // for player collision checking
+        this.animatedObjects = [];
+
+        this._buildIslandMesh();
+        this._buildWater();
+        this._buildRockOutcroppings();
+      }
+
+      _buildIslandMesh() {
+        // High quality low poly displaced terrain
+        const subdivisions = 64;
+        const size = CONFIG.islandRadius * 2.2;
+        const geom = new THREE.PlaneGeometry(size, size, subdivisions, subdivisions);
+        geom.rotateX(-Math.PI / 2);
+
+        const pos = geom.attributes.position;
+        const colors = [];
+        const cGrass = new THREE.Color(0x489635);
+        const cGrassHigh = new THREE.Color(0x66b245);
+        const cSand = new THREE.Color(0xdbbd82);
+        const cDirt = new THREE.Color(0x735133);
+        const cRock = new THREE.Color(0x5c636a);
+
+        for (let i = 0; i < pos.count; i++) {
+          const x = pos.getX(i);
+          const z = pos.getZ(i);
+          const dist = Math.hypot(x, z);
+
+          // Get elevation
+          let y = getTerrainHeight(x, z);
+
+          // Floating rock underbelly taper below water
+          if (dist > CONFIG.islandRadius) {
+            y = -14 - Math.sin(dist * 0.4) * 3;
+          }
+
+          pos.setY(i, y);
+
+          // Vertex coloring based on slope and height
+          const vColor = new THREE.Color();
+          if (y < 0.3) {
+            vColor.copy(cSand).lerp(cDirt, Math.max(0, -y / 5));
+          } else if (y < 1.4) {
+            vColor.copy(cSand).lerp(cGrass, (y - 0.3) / 1.1);
+          } else if (y > 4.5) {
+            vColor.copy(cGrassHigh).lerp(cRock, (y - 4.5) / 2.5);
+          } else {
+            vColor.copy(cGrass).lerp(cGrassHigh, Math.random() * 0.25);
+          }
+          colors.push(vColor.r, vColor.g, vColor.b);
+        }
+
+        geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        geom.computeVertexNormals();
+
+        const terrainMat = new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          flatShading: true,
+          roughness: 0.88,
+          metalness: 0.05,
+        });
+
+        this.islandMesh = new THREE.Mesh(geom, terrainMat);
+        this.islandMesh.receiveShadow = true;
+        this.scene.add(this.islandMesh);
+
+        // Build Underbelly Rock Core (so it truly looks like a stylized floating island)
+        const coneGeo = new THREE.ConeGeometry(CONFIG.islandRadius * 0.95, 26, 18, 3, false);
+        coneGeo.rotateX(Math.PI);
+        coneGeo.translate(0, -12, 0);
+
+        // Displace underbelly vertices for craggy rocky look
+        const cPos = coneGeo.attributes.position;
+        for (let i = 0; i < cPos.count; i++) {
+          const vx = cPos.getX(i);
+          const vy = cPos.getY(i);
+          const vz = cPos.getZ(i);
+          const noise = Math.sin(vx * 0.3) * Math.cos(vz * 0.3) * 2.8;
+          cPos.setX(i, vx + noise * 0.5);
+          cPos.setZ(i, vz + noise * 0.5);
+        }
+        coneGeo.computeVertexNormals();
+
+        const underbellyMat = new THREE.MeshStandardMaterial({
+          color: 0x3f3d45,
+          flatShading: true,
+          roughness: 0.95,
+        });
+        const underbelly = new THREE.Mesh(coneGeo, underbellyMat);
+        underbelly.receiveShadow = true;
+        this.scene.add(underbelly);
+      }
+
+      _buildWater() {
+        // Multi-ring low-poly water
+        const waterGeo = new THREE.PlaneGeometry(CONFIG.waterRadius * 2, CONFIG.waterRadius * 2, 70, 70);
+        waterGeo.rotateX(-Math.PI / 2);
+
+        this.waterOriginalPos = waterGeo.attributes.position.clone();
+
+        const waterMat = new THREE.MeshStandardMaterial({
+          color: 0x1e88e5,
+          transparent: true,
+          opacity: 0.78,
+          roughness: 0.15,
+          metalness: 0.2,
+          flatShading: true,
+        });
+
+        this.waterMesh = new THREE.Mesh(waterGeo, waterMat);
+        this.waterMesh.position.y = 0.0;
+        this.waterMesh.receiveShadow = true;
+        this.scene.add(this.waterMesh);
+
+        // Animated foam rim ring near island shores
+        const foamGeo = new THREE.RingGeometry(CONFIG.islandRadius * 0.88, CONFIG.islandRadius * 1.05, 48);
+        foamGeo.rotateX(-Math.PI / 2);
+        const foamMat = new THREE.MeshBasicMaterial({
+          color: 0xebf8ff,
+          transparent: true,
+          opacity: 0.45,
+          side: THREE.DoubleSide,
+        });
+        this.foamMesh = new THREE.Mesh(foamGeo, foamMat);
+        this.foamMesh.position.y = 0.08;
+        this.scene.add(this.foamMesh);
+      }
+
+      _buildRockOutcroppings() {
+        // Dramatic low-poly boulders along shores and hills
+        const rockMat = new THREE.MeshStandardMaterial({
+          color: 0x6e7681,
+          roughness: 0.9,
+          flatShading: true,
+        });
+
+        const rockPositions = [
+          { x: 22, z: 12, s: 3.5 },
+          { x: 24, z: 9, s: 2.4 },
+          { x: -20, z: -15, s: 3.8 },
+          { x: -22, z: -12, s: 2.6 },
+          { x: 5, z: 26, s: 3.2 },
+          { x: 8, z: 24, s: 2.1 },
+          { x: -24, z: 14, s: 2.9 },
+          { x: 12, z: -22, s: 3.0 },
+          { x: 14, z: -20, s: 2.2 },
+        ];
+
+        rockPositions.forEach(rp => {
+          const y = getTerrainHeight(rp.x, rp.z);
+          const rGeo = new THREE.DodecahedronGeometry(rp.s, 1);
+          // Squash and rotate randomly
+          const rMesh = new THREE.Mesh(rGeo, rockMat);
+          rMesh.position.set(rp.x, y + rp.s * 0.35, rp.z);
+          rMesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+          rMesh.scale.set(1.1, 0.8, 0.95);
+          rMesh.castShadow = true;
+          rMesh.receiveShadow = true;
+          this.scene.add(rMesh);
+
+          // Register obstacle for player collision
+          this.obstacles.push({
+            type: 'circle',
+            x: rp.x,
+            z: rp.z,
+            radius: rp.s * 0.95,
+          });
+        });
+      }
+
+      update(time) {
+        // Animate water vertex waves
+        const pos = this.waterMesh.geometry.attributes.position;
+        const orig = this.waterOriginalPos;
+        for (let i = 0; i < pos.count; i++) {
+          const x = orig.getX(i);
+          const z = orig.getZ(i);
+          const dist = Math.hypot(x, z);
+
+          // Combine multiple sine waves
+          const wave = Math.sin(x * 0.14 + time * 1.8) * Math.cos(z * 0.14 + time * 1.5) * 0.35
+                     + Math.sin(dist * 0.2 - time * 2.0) * 0.22;
+          pos.setY(i, wave);
+        }
+        pos.needsUpdate = true;
+
+        // Subtle foam pulse
+        if (this.foamMesh) {
+          const s = 1.0 + Math.sin(time * 2.2) * 0.02;
+          this.foamMesh.scale.set(s, 1, s);
+        }
+      }
+    }
+
+    // --- 6. ARCHITECTURE: STYLIZED WOODEN HOUSE & FURNISHED INTERIOR ---
+    class HouseSystem {
+      constructor(scene, obstacles) {
+        this.scene = scene;
+        this.obstacles = obstacles;
+
+        this.houseGroup = new THREE.Group();
+        this.housePos = new THREE.Vector3(-6, 2.5, -4);
+        this.houseGroup.position.copy(this.housePos);
+
+        this.width = 6.2;
+        this.depth = 5.2;
+        this.wallHeight = 3.6;
+
+        this.doorOpenAngle = 0;
+        this.targetDoorAngle = 0;
+
+        this._buildHouseStructure();
+        this._buildPorch();
+        this._buildInteriorFurnishings();
+        this._registerCollisions();
+
+        this.scene.add(this.houseGroup);
+      }
+
+      _buildHouseStructure() {
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.8, flatShading: true });
+        const darkWoodMat = new THREE.MeshStandardMaterial({ color: 0x4a2e16, roughness: 0.85, flatShading: true });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x9e382b, roughness: 0.7, flatShading: true });
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0x5a5d64, roughness: 0.9, flatShading: true });
+        const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x3d2714, roughness: 0.7 });
+        const glassMat = new THREE.MeshStandardMaterial({
+          color: 0xffe89e,
+          emissive: 0xffb733,
+          emissiveIntensity: 0.35,
+          transparent: true,
+          opacity: 0.85,
+          roughness: 0.2
+        });
+
+        // 1. Foundation Slab
+        const slabGeo = new THREE.BoxGeometry(this.width + 0.6, 0.4, this.depth + 0.6);
+        const slab = new THREE.Mesh(slabGeo, stoneMat);
+        slab.position.y = 0.2;
+        slab.receiveShadow = true;
+        this.houseGroup.add(slab);
+
+        // 2. Interior Floor
+        const floorGeo = new THREE.BoxGeometry(this.width - 0.2, 0.1, this.depth - 0.2);
+        const floor = new THREE.Mesh(floorGeo, darkWoodMat);
+        floor.position.y = 0.45;
+        floor.receiveShadow = true;
+        this.houseGroup.add(floor);
+
+        // 3. Wall Components (Modular with door and window cutouts)
+        const wallThick = 0.3;
+
+        // Back Wall
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(this.width, this.wallHeight, wallThick), woodMat);
+        backWall.position.set(0, this.wallHeight / 2 + 0.4, -this.depth / 2);
+        backWall.castShadow = true;
+        backWall.receiveShadow = true;
+        this.houseGroup.add(backWall);
+
+        // Left Wall (with window cutout simulated by two wall blocks & window)
+        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, this.wallHeight, this.depth), woodMat);
+        leftWall.position.set(-this.width / 2, this.wallHeight / 2 + 0.4, 0);
+        leftWall.castShadow = true;
+        leftWall.receiveShadow = true;
+        this.houseGroup.add(leftWall);
+
+        // Right Wall
+        const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, this.wallHeight, this.depth), woodMat);
+        rightWall.position.set(this.width / 2, this.wallHeight / 2 + 0.4, 0);
+        rightWall.castShadow = true;
+        rightWall.receiveShadow = true;
+        this.houseGroup.add(rightWall);
+
+        // Front Wall Left Segment
+        const fWallLeft = new THREE.Mesh(new THREE.BoxGeometry(2.3, this.wallHeight, wallThick), woodMat);
+        fWallLeft.position.set(-1.85, this.wallHeight / 2 + 0.4, this.depth / 2);
+        fWallLeft.castShadow = true;
+        this.houseGroup.add(fWallLeft);
+
+        // Front Wall Right Segment
+        const fWallRight = new THREE.Mesh(new THREE.BoxGeometry(2.3, this.wallHeight, wallThick), woodMat);
+        fWallRight.position.set(1.85, this.wallHeight / 2 + 0.4, this.depth / 2);
+        fWallRight.castShadow = true;
+        this.houseGroup.add(fWallRight);
+
+        // Front Wall Lintel (above door)
+        const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.1, wallThick), woodMat);
+        lintel.position.set(0, this.wallHeight - 0.15, this.depth / 2);
+        lintel.castShadow = true;
+        this.houseGroup.add(lintel);
+
+        // 4. Windows on Walls
+        const winGeo = new THREE.BoxGeometry(1.3, 1.3, 0.1);
+        const winLeft = new THREE.Mesh(winGeo, glassMat);
+        winLeft.position.set(-this.width / 2, 2.1, 0);
+        winLeft.rotation.y = Math.PI / 2;
+        this.houseGroup.add(winLeft);
+
+        const winRight = new THREE.Mesh(winGeo, glassMat);
+        winRight.position.set(this.width / 2, 2.1, 0);
+        winRight.rotation.y = Math.PI / 2;
+        this.houseGroup.add(winRight);
+
+        // 5. Interactive Wooden Door with Hinge Pivot
+        this.doorHinge = new THREE.Group();
+        this.doorHinge.position.set(-0.75, 0.4, this.depth / 2);
+
+        const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(1.45, 2.45, 0.14), darkWoodMat);
+        doorMesh.position.set(0.725, 1.225, 0); // offset so pivot is on left edge
+        doorMesh.castShadow = true;
+
+        // Door knob
+        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), new THREE.MeshStandardMaterial({ color: 0xdaa520 }));
+        knob.position.set(1.25, 1.2, 0.1);
+        doorMesh.add(knob);
+
+        this.doorHinge.add(doorMesh);
+        this.houseGroup.add(this.doorHinge);
+
+        // 6. Peaked Gable Wooden Roof
+        const roofHeight = 2.1;
+        const roofOverhang = 0.6;
+        const rLen = this.width + roofOverhang * 2;
+        const rDep = (this.depth / 2) + roofOverhang * 1.1;
+
+        // Slanted roof slabs
+        const roofSlabGeo = new THREE.BoxGeometry(rLen, 0.22, rDep * 1.28);
+        this.roofMat = new THREE.MeshStandardMaterial({
+          color: 0x9e382b,
+          roughness: 0.7,
+          flatShading: true,
+          transparent: true,
+          opacity: 1.0
+        });
+
+        // Left Slope
+        const roofL = new THREE.Mesh(roofSlabGeo, this.roofMat);
+        roofL.position.set(0, this.wallHeight + roofHeight * 0.52, -1.35);
+        roofL.rotation.x = 0.62;
+        roofL.castShadow = true;
+        this.houseGroup.add(roofL);
+
+        // Right Slope
+        const roofR = new THREE.Mesh(roofSlabGeo, this.roofMat);
+        roofR.position.set(0, this.wallHeight + roofHeight * 0.52, 1.35);
+        roofR.rotation.x = -0.62;
+        roofR.castShadow = true;
+        this.houseGroup.add(roofR);
+
+        // Triangular Gable End Walls
+        const gableShape = new THREE.Shape();
+        gableShape.moveTo(-this.depth / 2, 0);
+        gableShape.lineTo(0, roofHeight);
+        gableShape.lineTo(this.depth / 2, 0);
+        gableShape.closePath();
+
+        const extrudeSettings = { depth: wallThick, bevelEnabled: false };
+        const gableGeo = new THREE.ExtrudeGeometry(gableShape, extrudeSettings);
+        this.gableMat = new THREE.MeshStandardMaterial({
+          color: 0x8b5a2b,
+          roughness: 0.8,
+          flatShading: true,
+          transparent: true,
+          opacity: 1.0
+        });
+
+        const gableFront = new THREE.Mesh(gableGeo, this.gableMat);
+        gableFront.position.set(this.width / 2 - wallThick, this.wallHeight + 0.4, 0);
+        gableFront.rotation.y = -Math.PI / 2;
+        this.houseGroup.add(gableFront);
+
+        const gableBack = new THREE.Mesh(gableGeo, this.gableMat);
+        gableBack.position.set(-this.width / 2, this.wallHeight + 0.4, 0);
+        gableBack.rotation.y = -Math.PI / 2;
+        this.houseGroup.add(gableBack);
+
+        // 7. Chimney & Animated Smoke
+        const chimneyGeo = new THREE.BoxGeometry(0.85, 3.2, 0.85);
+        const chimney = new THREE.Mesh(chimneyGeo, stoneMat);
+        chimney.position.set(1.9, this.wallHeight + 1.2, -1.2);
+        chimney.castShadow = true;
+        this.houseGroup.add(chimney);
+
+        // Smoke particles container
+        this.smokeParticles = [];
+        const smokeMat = new THREE.MeshBasicMaterial({ color: 0xdddddd, transparent: true, opacity: 0.35 });
+        for (let i = 0; i < 7; i++) {
+          const puff = new THREE.Mesh(new THREE.DodecahedronGeometry(0.24, 0), smokeMat);
+          puff.position.set(1.9, this.wallHeight + 3.0 + i * 0.45, -1.2);
+          puff.userData = { offset: i * 0.9, speed: 0.8 + Math.random() * 0.4 };
+          this.houseGroup.add(puff);
+          this.smokeParticles.push(puff);
+        }
+      }
+
+      _buildPorch() {
+        const darkWoodMat = new THREE.MeshStandardMaterial({ color: 0x4a2e16, roughness: 0.85, flatShading: true });
+        const postMat = new THREE.MeshStandardMaterial({ color: 0x613c1d, roughness: 0.8 });
+
+        // Porch Deck
+        const deckGeo = new THREE.BoxGeometry(4.2, 0.25, 2.2);
+        const deck = new THREE.Mesh(deckGeo, darkWoodMat);
+        deck.position.set(0, 0.3, this.depth / 2 + 1.1);
+        deck.receiveShadow = true;
+        deck.castShadow = true;
+        this.houseGroup.add(deck);
+
+        // Porch steps
+        const step1 = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.15, 0.7), darkWoodMat);
+        step1.position.set(0, 0.15, this.depth / 2 + 2.45);
+        step1.receiveShadow = true;
+        this.houseGroup.add(step1);
+
+        // Porch Support Pillars
+        const postGeo = new THREE.BoxGeometry(0.18, 2.8, 0.18);
+        const postL = new THREE.Mesh(postGeo, postMat);
+        postL.position.set(-1.9, 1.5, this.depth / 2 + 2.0);
+        postL.castShadow = true;
+        this.houseGroup.add(postL);
+
+        const postR = new THREE.Mesh(postGeo, postMat);
+        postR.position.set(1.9, 1.5, this.depth / 2 + 2.0);
+        postR.castShadow = true;
+        this.houseGroup.add(postR);
+
+        // Porch Awning Roof
+        const awningGeo = new THREE.BoxGeometry(4.6, 0.15, 2.5);
+        const awning = new THREE.Mesh(awningGeo, new THREE.MeshStandardMaterial({ color: 0x9e382b, flatShading: true }));
+        awning.position.set(0, 2.9, this.depth / 2 + 1.2);
+        awning.rotation.x = 0.18;
+        awning.castShadow = true;
+        this.houseGroup.add(awning);
+      }
+
+      _buildInteriorFurnishings() {
+        const furnitureWood = new THREE.MeshStandardMaterial({ color: 0x6e411b, roughness: 0.75, flatShading: true });
+
+        // 1. Bed (Corner)
+        const bedGroup = new THREE.Group();
+        bedGroup.position.set(-1.8, 0.45, -1.3);
+
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 2.2), furnitureWood);
+        frame.position.y = 0.2;
+        bedGroup.add(frame);
+
+        const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.3, 2.0), new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.8 }));
+        mattress.position.y = 0.45;
+        bedGroup.add(mattress);
+
+        const blanket = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.32, 1.3), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.9 }));
+        blanket.position.set(0, 0.47, 0.35);
+        bedGroup.add(blanket);
+
+        const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.2, 0.5), new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.6 }));
+        pillow.position.set(0, 0.65, -0.65);
+        bedGroup.add(pillow);
+
+        this.houseGroup.add(bedGroup);
+
+        // 2. Wooden Table & Chair
+        const tableGroup = new THREE.Group();
+        tableGroup.position.set(1.7, 0.45, -1.2);
+
+        const tabletop = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 1.2), furnitureWood);
+        tabletop.position.y = 1.0;
+        tableGroup.add(tabletop);
+
+        const tLegGeo = new THREE.BoxGeometry(0.12, 1.0, 0.12);
+        [[-0.8, -0.5], [0.8, -0.5], [-0.8, 0.5], [0.8, 0.5]].forEach(([lx, lz]) => {
+          const leg = new THREE.Mesh(tLegGeo, furnitureWood);
+          leg.position.set(lx, 0.5, lz);
+          tableGroup.add(leg);
+        });
+
+        // Small Mug & Book on Table
+        const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.16, 8), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+        mug.position.set(0.4, 1.14, 0.1);
+        tableGroup.add(mug);
+
+        const book = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, 0.45), new THREE.MeshStandardMaterial({ color: 0x10b981 }));
+        book.position.set(-0.3, 1.1, 0.0);
+        book.rotation.y = 0.25;
+        tableGroup.add(book);
+
+        // Chair tucked next to table
+        const chairSeat = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 0.65), furnitureWood);
+        chairSeat.position.set(1.7, 0.95, -0.3);
+        this.houseGroup.add(chairSeat);
+
+        const cLegGeo = new THREE.BoxGeometry(0.08, 0.5, 0.08);
+        [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]].forEach(([cx, cz]) => {
+          const cl = new THREE.Mesh(cLegGeo, furnitureWood);
+          cl.position.set(1.7 + cx, 0.7, -0.3 + cz);
+          this.houseGroup.add(cl);
+        });
+
+        const chairBack = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.6, 0.08), furnitureWood);
+        chairBack.position.set(1.7, 1.3, -0.0);
+        this.houseGroup.add(chairBack);
+
+        this.houseGroup.add(tableGroup);
+
+        // 3. Cozy Glowing Interior Lamp (Nightstand & Lantern)
+        const stand = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.6), furnitureWood);
+        stand.position.set(-2.2, 0.85, 0.6);
+        this.houseGroup.add(stand);
+
+        const lantern = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12, 0.14, 0.35, 6),
+          new THREE.MeshStandardMaterial({
+            color: 0xffd166,
+            emissive: 0xffaa00,
+            emissiveIntensity: 0.9,
+            roughness: 0.3,
+          })
+        );
+        lantern.position.set(-2.2, 1.45, 0.6);
+        this.houseGroup.add(lantern);
+
+        // Point Light for Warm Glow
+        this.lampLight = new THREE.PointLight(0xffa233, 1.2, 10, 1.8);
+        this.lampLight.position.set(-2.2, 1.7, 0.6);
+        this.houseGroup.add(this.lampLight);
+      }
+
+      _registerCollisions() {
+        // Obstacles for house walls
+        const wx = this.housePos.x;
+        const wz = this.housePos.z;
+
+        // Left & Right walls
+        this.obstacles.push({ type: 'box', minX: wx - this.width / 2 - 0.2, maxX: wx - this.width / 2 + 0.3, minZ: wz - this.depth / 2, maxZ: wz + this.depth / 2 });
+        this.obstacles.push({ type: 'box', minX: wx + this.width / 2 - 0.3, maxX: wx + this.width / 2 + 0.2, minZ: wz - this.depth / 2, maxZ: wz + this.depth / 2 });
+        // Back wall
+        this.obstacles.push({ type: 'box', minX: wx - this.width / 2, maxX: wx + this.width / 2, minZ: wz - this.depth / 2 - 0.2, maxZ: wz - this.depth / 2 + 0.3 });
+
+        // Front wall segments (leaving doorway gap at x: -0.7 to +0.7)
+        this.obstacles.push({ type: 'box', minX: wx - this.width / 2, maxX: wx - 0.75, minZ: wz + this.depth / 2 - 0.25, maxZ: wz + this.depth / 2 + 0.25 });
+        this.obstacles.push({ type: 'box', minX: wx + 0.75, maxX: wx + this.width / 2, minZ: wz + this.depth / 2 - 0.25, maxZ: wz + this.depth / 2 + 0.25 });
+
+        // Porch posts
+        this.obstacles.push({ type: 'circle', x: wx - 1.9, z: wz + this.depth / 2 + 2.0, radius: 0.3 });
+        this.obstacles.push({ type: 'circle', x: wx + 1.9, z: wz + this.depth / 2 + 2.0, radius: 0.3 });
+      }
+
+      toggleDoor() {
+        gameState.isDoorOpen = !gameState.isDoorOpen;
+        this.targetDoorAngle = gameState.isDoorOpen ? -Math.PI * 0.58 : 0;
+        audio.playDoor();
+      }
+
+      update(dt, time) {
+        // Smooth door rotation
+        this.doorOpenAngle = THREE.MathUtils.lerp(this.doorOpenAngle, this.targetDoorAngle, dt * 8.0);
+        this.doorHinge.rotation.y = this.doorOpenAngle;
+
+        // Smooth roof transparency fading during interior mode
+        if (this.roofMat && this.gableMat) {
+          const isInterior = (cameraController && cameraController.isInteriorMode) || gameState.isInsideHouse;
+          const targetRoofOpacity = isInterior ? 0.12 : 1.0;
+          this.roofMat.opacity = THREE.MathUtils.lerp(this.roofMat.opacity, targetRoofOpacity, dt * 6.0);
+          this.gableMat.opacity = THREE.MathUtils.lerp(this.gableMat.opacity, targetRoofOpacity, dt * 6.0);
+          this.roofMat.depthWrite = this.roofMat.opacity > 0.5;
+          this.gableMat.depthWrite = this.gableMat.opacity > 0.5;
+        }
+
+        // Animated chimney smoke
+        this.smokeParticles.forEach((puff, idx) => {
+          puff.position.y += dt * puff.userData.speed;
+          puff.position.x = 1.9 + Math.sin(time * 2.0 + puff.userData.offset) * 0.25;
+          puff.position.z = -1.2 + Math.cos(time * 1.7 + puff.userData.offset) * 0.2;
+          const scale = 1.0 + (puff.position.y - (this.wallHeight + 3.0)) * 0.4;
+          puff.scale.setScalar(scale);
+
+          if (puff.position.y > this.wallHeight + 5.5) {
+            puff.position.y = this.wallHeight + 3.0;
+          }
+        });
+      }
+    }
+
+    // --- 7. NATURAL ENVIRONMENT: TREES, ROCKS, FLOWERS, GRASS, CLOUDS, PARTICLES ---
+    class NatureSystem {
+      constructor(scene, obstacles) {
+        this.scene = scene;
+        this.obstacles = obstacles;
+
+        this.trees = [];
+        this.clouds = [];
+        this.fireflies = null;
+
+        this._spawnTrees();
+        this._spawnFloraAndGrass();
+        this._spawnClouds();
+        this._spawnAmbientParticles();
+      }
+
+      _spawnTrees() {
+        // Natural distribution of stylized low-poly trees
+        const treeConfigs = [
+          { x: 12, z: -10, type: 'oak', s: 1.2 },
+          { x: 16, z: -5, type: 'pine', s: 1.4 },
+          { x: 8, z: 14, type: 'pine', s: 1.1 },
+          { x: -14, z: 12, type: 'oak', s: 1.3 },
+          { x: -18, z: 6, type: 'pine', s: 1.25 },
+          { x: -2, z: 22, type: 'oak', s: 1.15 },
+          { x: 18, z: 14, type: 'pine', s: 1.35 },
+          { x: -16, z: -12, type: 'oak', s: 1.05 },
+        ];
+
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x543d2b, roughness: 0.9, flatShading: true });
+        const pineMat = new THREE.MeshStandardMaterial({ color: 0x2d6335, roughness: 0.8, flatShading: true });
+        const oakMat = new THREE.MeshStandardMaterial({ color: 0x3d8236, roughness: 0.75, flatShading: true });
+        const oakAccentMat = new THREE.MeshStandardMaterial({ color: 0x4e9c45, roughness: 0.75, flatShading: true });
+
+        treeConfigs.forEach(cfg => {
+          const y = getTerrainHeight(cfg.x, cfg.z);
+          const treeGroup = new THREE.Group();
+          treeGroup.position.set(cfg.x, y, cfg.z);
+          treeGroup.scale.setScalar(cfg.s);
+
+          if (cfg.type === 'pine') {
+            // Pine / Fir tree: tapered trunk + 3 cone foliage tiers
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.45, 2.5, 6), trunkMat);
+            trunk.position.y = 1.25;
+            trunk.castShadow = true;
+            treeGroup.add(trunk);
+
+            const tiers = [
+              { r: 2.2, h: 2.3, y: 2.8 },
+              { r: 1.7, h: 2.0, y: 4.2 },
+              { r: 1.1, h: 1.8, y: 5.4 },
+            ];
+            tiers.forEach(t => {
+              const cone = new THREE.Mesh(new THREE.ConeGeometry(t.r, t.h, 7), pineMat);
+              cone.position.y = t.y;
+              cone.castShadow = true;
+              cone.receiveShadow = true;
+              treeGroup.add(cone);
+            });
+          } else {
+            // Broadleaf Oak: curved trunk + clustered geometric cloud canopies
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, 3.2, 6), trunkMat);
+            trunk.position.y = 1.6;
+            trunk.rotation.z = (Math.random() - 0.5) * 0.15;
+            trunk.castShadow = true;
+            treeGroup.add(trunk);
+
+            // Foliage clusters
+            const clusters = [
+              { x: 0, y: 3.8, z: 0, r: 1.9, m: oakMat },
+              { x: 0.9, y: 3.5, z: 0.5, r: 1.4, m: oakAccentMat },
+              { x: -0.8, y: 3.6, z: -0.4, r: 1.5, m: oakMat },
+              { x: 0.2, y: 4.6, z: -0.2, r: 1.5, m: oakAccentMat },
+            ];
+            clusters.forEach(c => {
+              const puff = new THREE.Mesh(new THREE.DodecahedronGeometry(c.r, 1), c.m);
+              puff.position.set(c.x, c.y, c.z);
+              puff.castShadow = true;
+              puff.receiveShadow = true;
+              treeGroup.add(puff);
+            });
+          }
+
+          this.scene.add(treeGroup);
+          this.trees.push(treeGroup);
+
+          // Solid obstacle
+          this.obstacles.push({
+            type: 'circle',
+            x: cfg.x,
+            z: cfg.z,
+            radius: 0.85 * cfg.s,
+          });
+        });
+      }
+
+      _spawnFloraAndGrass() {
+        // Colorful flower blossoms and grass tufts
+        const flowerGeo = new THREE.DodecahedronGeometry(0.18, 0);
+        const fColors = [0xff5e7e, 0xffd166, 0x06d6a0, 0x118ab2, 0xff9f1c];
+
+        for (let i = 0; i < 90; i++) {
+          const r = Math.random() * (CONFIG.islandRadius * 0.72);
+          const theta = Math.random() * Math.PI * 2;
+          const x = Math.cos(theta) * r;
+          const z = Math.sin(theta) * r;
+
+          // Don't spawn inside the house
+          if (Math.hypot(x - (-6), z - (-4)) < 5.0) continue;
+
+          const y = getTerrainHeight(x, z);
+          if (y < 0.6) continue; // avoid beach/water
+
+          const color = fColors[Math.floor(Math.random() * fColors.length)];
+          const fMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.6, flatShading: true });
+          const blossom = new THREE.Mesh(flowerGeo, fMat);
+          blossom.position.set(x, y + 0.15, z);
+          blossom.rotation.set(Math.random() * 0.3, Math.random() * Math.PI, 0);
+          this.scene.add(blossom);
+
+          // Little stem
+          const stemGeo = new THREE.CylinderGeometry(0.02, 0.03, 0.25, 4);
+          const stemMat = new THREE.MeshBasicMaterial({ color: 0x3d702b });
+          const stem = new THREE.Mesh(stemGeo, stemMat);
+          stem.position.set(x, y + 0.1, z);
+          this.scene.add(stem);
+        }
+
+        // Stepping Stones near porch
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0x7c858e, roughness: 0.9, flatShading: true });
+        const stepCoords = [
+          { x: -6, z: -0.6 },
+          { x: -5.8, z: 0.6 },
+          { x: -5.2, z: 1.8 },
+          { x: -4.4, z: 2.9 },
+          { x: -3.2, z: 3.8 },
+        ];
+        stepCoords.forEach(c => {
+          const sy = getTerrainHeight(c.x, c.z);
+          const step = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.55, 0.12, 7), stoneMat);
+          step.position.set(c.x, sy + 0.06, c.z);
+          step.rotation.y = Math.random() * Math.PI;
+          step.receiveShadow = true;
+          this.scene.add(step);
+        });
+      }
+
+      _spawnClouds() {
+        const cloudMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 0.95,
+          flatShading: true,
+          transparent: true,
+          opacity: 0.88,
+        });
+
+        const cloudPuffGeo = new THREE.DodecahedronGeometry(1, 1);
+
+        for (let i = 0; i < 9; i++) {
+          const cloud = new THREE.Group();
+          const pCount = 5 + Math.floor(Math.random() * 4);
+
+          for (let p = 0; p < pCount; p++) {
+            const puff = new THREE.Mesh(cloudPuffGeo, cloudMat);
+            const scale = 2.0 + Math.random() * 2.2;
+            puff.scale.set(scale * 1.5, scale * 0.9, scale * 1.1);
+            puff.position.set((p - pCount / 2) * 2.2, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 1.8);
+            puff.castShadow = true;
+            cloud.add(puff);
+          }
+
+          const angle = (i / 9) * Math.PI * 2 + Math.random() * 0.4;
+          const dist = 30 + Math.random() * 50;
+          cloud.position.set(Math.cos(angle) * dist, 24 + Math.random() * 12, Math.sin(angle) * dist);
+          cloud.userData = { speed: 0.8 + Math.random() * 0.7, dist: dist };
+
+          this.scene.add(cloud);
+          this.clouds.push(cloud);
+        }
+      }
+
+      _spawnAmbientParticles() {
+        // Floating magical fireflies / pollen
+        const count = 60;
+        const pGeo = new THREE.BufferGeometry();
+        const pPos = new Float32Array(count * 3);
+
+        for (let i = 0; i < count; i++) {
+          const r = Math.random() * (CONFIG.islandRadius * 0.7);
+          const theta = Math.random() * Math.PI * 2;
+          pPos[i * 3] = Math.cos(theta) * r;
+          pPos[i * 3 + 1] = 2.0 + Math.random() * 6.0;
+          pPos[i * 3 + 2] = Math.sin(theta) * r;
+        }
+
+        pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+        const pMat = new THREE.PointsMaterial({
+          color: 0x88ffcc,
+          size: 0.4,
+          transparent: true,
+          opacity: 0.7,
+        });
+
+        this.fireflies = new THREE.Points(pGeo, pMat);
+        this.scene.add(this.fireflies);
+      }
+
+      update(dt, time) {
+        // Sway trees gently
+        this.trees.forEach((tree, idx) => {
+          tree.rotation.z = Math.sin(time * 1.5 + idx) * 0.02;
+          tree.rotation.x = Math.cos(time * 1.2 + idx) * 0.015;
+        });
+
+        // Drift clouds across the sky
+        this.clouds.forEach(cloud => {
+          cloud.position.x += dt * cloud.userData.speed;
+          if (cloud.position.x > 95) cloud.position.x = -95;
+        });
+
+        // Float fireflies in gentle sine paths
+        if (this.fireflies) {
+          const pos = this.fireflies.geometry.attributes.position;
+          for (let i = 0; i < pos.count; i++) {
+            let py = pos.getY(i) + Math.sin(time * 2.0 + i) * 0.012;
+            if (py > 8.0) py = 2.0;
+            pos.setY(i, py);
+          }
+          pos.needsUpdate = true;
+        }
+      }
+    }
+
+    // --- 8. COLLECTIBLES: 5 GLOWING CRYSTALS SYSTEM ---
+    class CollectibleSystem {
+      constructor(scene) {
+        this.scene = scene;
+        this.crystals = [];
+        this.collectedCount = 0;
+
+        // 5 intentional scenic locations across island
+        const crystalLocations = [
+          { x: 16.5, z: 8.5, color: 0x38bdf8, name: 'Sapphire Pinnacle' },   // High scenic peak
+          { x: -16.0, z: -15.0, color: 0xa855f7, name: 'Amethyst Grove' },    // Cozy woodland clearing
+          { x: -14.5, z: 18.0, color: 0xef4444, name: 'Ruby Ridge' },        // South rocky outcrop
+          { x: 19.0, z: -14.0, color: 0x10b981, name: 'Emerald Shore' },     // East sandy bluff
+          { x: 2.0, z: -2.0, color: 0xf59e0b, name: 'Amber Meadow' },        // Garden path near cabin
+        ];
+
+        this._spawnCrystals(crystalLocations);
+      }
+
+      _spawnCrystals(locations) {
+        // Octahedral faceted gem geometry
+        const gemGeo = new THREE.OctahedronGeometry(0.7, 0);
+
+        locations.forEach((loc, idx) => {
+          const groundY = getTerrainHeight(loc.x, loc.z);
+          const group = new THREE.Group();
+          group.position.set(loc.x, groundY + 1.3, loc.z);
+
+          // Glowing gem mesh
+          const mat = new THREE.MeshStandardMaterial({
+            color: loc.color,
+            emissive: loc.color,
+            emissiveIntensity: 0.75,
+            roughness: 0.15,
+            metalness: 0.4,
+            flatShading: true,
+          });
+
+          const gem = new THREE.Mesh(gemGeo, mat);
+          gem.castShadow = true;
+          group.add(gem);
+
+          // Sparkle halo ring
+          const ringGeo = new THREE.TorusGeometry(1.0, 0.04, 6, 16);
+          const ringMat = new THREE.MeshBasicMaterial({ color: loc.color, transparent: true, opacity: 0.65 });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.rotation.x = Math.PI / 2;
+          group.add(ring);
+
+          // Point light
+          const light = new THREE.PointLight(loc.color, 1.3, 7, 2.0);
+          group.add(light);
+
+          this.scene.add(group);
+
+          this.crystals.push({
+            id: idx,
+            group: group,
+            gem: gem,
+            ring: ring,
+            light: light,
+            x: loc.x,
+            z: loc.z,
+            baseY: groundY + 1.3,
+            collected: false,
+            color: loc.color,
+          });
+        });
+      }
+
+      update(playerPos, dt, time) {
+        this.crystals.forEach(c => {
+          if (c.collected) return;
+
+          const dist = Math.hypot(playerPos.x - c.x, playerPos.z - c.z);
+
+          // Float & rotate animation
+          const bob = Math.sin(time * 2.5 + c.id * 1.5) * 0.22;
+          c.group.position.y = c.baseY + bob;
+
+          // Proximity excitation: spin faster and glow brighter when player is near!
+          const proximity = Math.max(0, 1 - (dist / 8.0));
+          const spinSpeed = 1.8 + proximity * 5.0;
+          c.gem.rotation.y += dt * spinSpeed;
+          c.gem.rotation.x = Math.sin(time * 2.0) * 0.2;
+          c.ring.rotation.z += dt * (spinSpeed * 0.7);
+
+          c.gem.material.emissiveIntensity = 0.75 + proximity * 0.8;
+          c.light.intensity = 1.3 + proximity * 1.5;
+
+          // Collection trigger radius (~1.75 units)
+          if (dist < 1.75 && Math.abs(playerPos.y - c.group.position.y) < 2.5) {
+            this.collect(c);
+          }
+        });
+      }
+
+      collect(c) {
+        c.collected = true;
+        this.collectedCount++;
+        gameState.crystalsCollected = this.collectedCount;
+
+        audio.playCrystalChime();
+
+        // Burst animation then hide
+        const duration = 0.35;
+        let elapsed = 0;
+        const startScale = c.group.scale.x;
+
+        const burstAnim = () => {
+          elapsed += 0.03;
+          const progress = elapsed / duration;
+          if (progress < 1) {
+            c.group.scale.setScalar(startScale * (1 + progress * 0.8));
+            c.light.intensity = 3.5 * (1 - progress);
+            c.gem.material.opacity = 1 - progress;
+            c.ring.material.opacity = 1 - progress;
+            requestAnimationFrame(burstAnim);
+          } else {
+            this.scene.remove(c.group);
+          }
+        };
+        burstAnim();
+
+        // Update UI
+        ui.updateCrystalCount(this.collectedCount, gameState.totalCrystals);
+
+        // Check Victory Condition
+        if (this.collectedCount >= gameState.totalCrystals) {
+          setTimeout(() => {
+            ui.showVictory();
+            audio.playVictory();
+          }, 600);
+        }
+      }
+
+      reset() {
+        this.crystals.forEach(c => {
+          c.collected = false;
+          c.group.scale.set(1, 1, 1);
+          c.light.intensity = 1.3;
+          c.gem.material.opacity = 1.0;
+          c.ring.material.opacity = 0.65;
+          this.scene.add(c.group);
+        });
+        this.collectedCount = 0;
+        gameState.crystalsCollected = 0;
+        ui.updateCrystalCount(0, gameState.totalCrystals);
+      }
+    }
+
+    // --- 9. PLAYER: CHARACTER MODEL, PROCEDURAL ANIMATION & PHYSICS ---
+    class PlayerCharacter {
+      constructor(scene, obstacles) {
+        this.scene = scene;
+        this.obstacles = obstacles;
+
+        this.position = new THREE.Vector3(-6, 3.0, 1.5); // Starts comfortably outside house porch
+        this.velocity = new THREE.Vector3();
+        this.rotationY = 0;
+        this.targetRotationY = 0;
+
+        this.isGrounded = false;
+        this.moveState = 'idle'; // 'idle', 'walk', 'run', 'jump'
+        this.animTimer = 0;
+        this.stepTimer = 0;
+
+        this._buildCharacterMesh();
+        this.scene.add(this.meshGroup);
+      }
+
+      _buildCharacterMesh() {
+        this.meshGroup = new THREE.Group();
+
+        // Low-poly adventurer materials
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0xffd4b2, roughness: 0.6, flatShading: true });
+        const coatMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.7, flatShading: true });
+        const pantsMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8, flatShading: true });
+        const bootsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9, flatShading: true });
+        const hatMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.75, flatShading: true });
+        const packMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85, flatShading: true });
+
+        // Torso / Coat
+        const torsoGeo = new THREE.BoxGeometry(0.7, 0.85, 0.45);
+        this.torso = new THREE.Mesh(torsoGeo, coatMat);
+        this.torso.position.y = 1.1;
+        this.torso.castShadow = true;
+        this.meshGroup.add(this.torso);
+
+        // Backpack
+        const pack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.28), packMat);
+        pack.position.set(0, 0.05, -0.32);
+        pack.castShadow = true;
+        this.torso.add(pack);
+
+        // Head
+        const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+        this.head = new THREE.Mesh(headGeo, skinMat);
+        this.head.position.y = 0.7;
+        this.head.castShadow = true;
+        this.torso.add(this.head);
+
+        // Adventurer Hat
+        const hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.06, 8), hatMat);
+        hatBrim.position.y = 0.28;
+        this.head.add(hatBrim);
+
+        const hatCrown = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 0.35, 8), hatMat);
+        hatCrown.position.y = 0.48;
+        this.head.add(hatCrown);
+
+        // Left & Right Arms (Pivoting at shoulders)
+        const armGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
+
+        this.leftArm = new THREE.Mesh(armGeo, coatMat);
+        this.leftArm.position.set(-0.46, 0.25, 0);
+        this.leftArm.geometry.translate(0, -0.3, 0); // pivot at shoulder
+        this.leftArm.castShadow = true;
+        this.torso.add(this.leftArm);
+
+        this.rightArm = new THREE.Mesh(armGeo, coatMat);
+        this.rightArm.position.set(0.46, 0.25, 0);
+        this.rightArm.geometry.translate(0, -0.3, 0);
+        this.rightArm.castShadow = true;
+        this.torso.add(this.rightArm);
+
+        // Left & Right Legs (Pivoting at hips)
+        const legGeo = new THREE.BoxGeometry(0.24, 0.7, 0.24);
+
+        this.leftLeg = new THREE.Mesh(legGeo, pantsMat);
+        this.leftLeg.position.set(-0.2, 0.68, 0);
+        this.leftLeg.geometry.translate(0, -0.32, 0); // pivot at hip
+        this.leftLeg.castShadow = true;
+        this.meshGroup.add(this.leftLeg);
+
+        this.rightLeg = new THREE.Mesh(legGeo, pantsMat);
+        this.rightLeg.position.set(0.2, 0.68, 0);
+        this.rightLeg.geometry.translate(0, -0.32, 0);
+        this.rightLeg.castShadow = true;
+        this.meshGroup.add(this.rightLeg);
+
+        // Boots
+        const bootGeo = new THREE.BoxGeometry(0.25, 0.2, 0.32);
+        const lBoot = new THREE.Mesh(bootGeo, bootsMat);
+        lBoot.position.set(0, -0.58, 0.04);
+        this.leftLeg.add(lBoot);
+
+        const rBoot = new THREE.Mesh(bootGeo, bootsMat);
+        rBoot.position.set(0, -0.58, 0.04);
+        this.rightLeg.add(rBoot);
+
+        this.meshGroup.position.copy(this.position);
+      }
+
+      update(dt, cameraAngleY) {
+        this.animTimer += dt;
+
+        // 1. Calculate camera-relative movement vectors
+        const forward = input.forward;
+        const strafe = input.strafe;
+        const isMoving = forward !== 0 || strafe !== 0;
+
+        let moveX = 0;
+        let moveZ = 0;
+
+        if (isMoving) {
+          const camFwdX = Math.sin(cameraAngleY);
+          const camFwdZ = Math.cos(cameraAngleY);
+          const camRightX = Math.cos(cameraAngleY);
+          const camRightZ = -Math.sin(cameraAngleY);
+
+          moveX = (camFwdX * forward + camRightX * strafe);
+          moveZ = (camFwdZ * forward + camRightZ * strafe);
+
+          const len = Math.hypot(moveX, moveZ);
+          if (len > 0.001) {
+            moveX /= len;
+            moveZ /= len;
+          }
+
+          // Smoothly rotate character to face travel direction
+          this.targetRotationY = Math.atan2(moveX, moveZ);
+          this.rotationY = THREE.MathUtils.lerp(
+            this.rotationY,
+            this.targetRotationY,
+            1.0 - Math.exp(-15.0 * dt)
+          );
+        }
+
+        const currentSpeed = input.isSprinting ? CONFIG.sprintSpeed : CONFIG.walkSpeed;
+        const targetVelX = moveX * currentSpeed;
+        const targetVelZ = moveZ * currentSpeed;
+
+        this.velocity.x = THREE.MathUtils.lerp(this.velocity.x, targetVelX, 1.0 - Math.exp(-18.0 * dt));
+        this.velocity.z = THREE.MathUtils.lerp(this.velocity.z, targetVelZ, 1.0 - Math.exp(-18.0 * dt));
+
+        // Jump physics
+        if (input.isJumping && this.isGrounded) {
+          this.velocity.y = CONFIG.jumpVelocity;
+          this.isGrounded = false;
+          audio.playJump();
+        }
+
+        // Apply Gravity
+        this.velocity.y += CONFIG.gravity * dt;
+
+        // 2. Perform Movement & Collision Resolution
+        const newX = this.position.x + this.velocity.x * dt;
+        const newZ = this.position.z + this.velocity.z * dt;
+        const newY = this.position.y + this.velocity.y * dt;
+
+        // Handle X and Z collisions with sliding
+        const resolvedPos = this._resolveCollisions(newX, newZ);
+        this.position.x = resolvedPos.x;
+        this.position.z = resolvedPos.z;
+
+        // Floor / Terrain Elevation check
+        const groundElevation = this._getGroundHeightAt(this.position.x, this.position.z);
+
+        if (newY <= groundElevation) {
+          this.position.y = groundElevation;
+          this.velocity.y = 0;
+          this.isGrounded = true;
+        } else {
+          this.position.y = newY;
+          this.isGrounded = false;
+        }
+
+        // Keep character inside floating island safe boundaries
+        const distFromCenter = Math.hypot(this.position.x, this.position.z);
+        if (distFromCenter > CONFIG.islandRadius - 1.2) {
+          const pushAngle = Math.atan2(this.position.z, this.position.x);
+          this.position.x = Math.cos(pushAngle) * (CONFIG.islandRadius - 1.2);
+          this.position.z = Math.sin(pushAngle) * (CONFIG.islandRadius - 1.2);
+        }
+
+        // 3. Update Procedural Animations
+        this._updateAnimations(isMoving, input.isSprinting, dt);
+
+        // Update mesh position and rotation
+        this.meshGroup.position.copy(this.position);
+        this.meshGroup.rotation.y = this.rotationY;
+      }
+
+      _getGroundHeightAt(x, z) {
+        // Check if inside house or on porch
+        const hPos = houseSystem.housePos;
+        const hw = houseSystem.width;
+        const hd = houseSystem.depth;
+
+        // Porch deck (x: -2.1 to 2.1, z: 2.6 to 4.8)
+        if (Math.abs(x - hPos.x) < 2.1 && (z - hPos.z) >= hd / 2 && (z - hPos.z) <= hd / 2 + 2.3) {
+          return hPos.y + 0.35;
+        }
+
+        // Inside house floor
+        if (Math.abs(x - hPos.x) < hw / 2 && Math.abs(z - hPos.z) < hd / 2) {
+          return hPos.y + 0.45;
+        }
+
+        // Natural terrain height
+        return getTerrainHeight(x, z);
+      }
+
+      _resolveCollisions(nextX, nextZ) {
+        const pRadius = 0.42;
+        let cx = nextX;
+        let cz = nextZ;
+
+        // Check if doorway is open when passing through house front wall
+        const hPos = houseSystem.housePos;
+        const doorOpeningX = hPos.x; // doorway center
+        const doorFrontZ = hPos.z + houseSystem.depth / 2;
+
+        const isNearDoorway = Math.abs(cx - doorOpeningX) < 0.72 && Math.abs(cz - doorFrontZ) < 0.6;
+        const doorPassable = gameState.isDoorOpen && isNearDoorway;
+
+        // Obstacles collision (Circle & Box)
+        for (const obs of this.obstacles) {
+          if (obs.type === 'circle') {
+            const dx = cx - obs.x;
+            const dz = cz - obs.z;
+            const dist = Math.hypot(dx, dz);
+            const minDist = obs.radius + pRadius;
+            if (dist < minDist && dist > 0.0001) {
+              const overlap = minDist - dist;
+              cx += (dx / dist) * overlap;
+              cz += (dz / dist) * overlap;
+            }
+          } else if (obs.type === 'box') {
+            if (doorPassable && Math.abs(obs.maxZ - doorFrontZ) < 0.3) {
+              // Permit passage through doorway when open
+              continue;
+            }
+            // AABB push-out
+            if (cx + pRadius > obs.minX && cx - pRadius < obs.maxX &&
+                cz + pRadius > obs.minZ && cz - pRadius < obs.maxZ) {
+              const penLeft = (cx + pRadius) - obs.minX;
+              const penRight = obs.maxX - (cx - pRadius);
+              const penBack = (cz + pRadius) - obs.minZ;
+              const penFront = obs.maxZ - (cz - pRadius);
+              const minPen = Math.min(penLeft, penRight, penBack, penFront);
+
+              if (minPen === penLeft) cx -= penLeft;
+              else if (minPen === penRight) cx += penRight;
+              else if (minPen === penBack) cz -= penBack;
+              else cz += penFront;
+            }
+          }
+        }
+
+        return { x: cx, z: cz };
+      }
+
+      _updateAnimations(isMoving, isSprinting, dt) {
+        const walkFreq = isSprinting ? 14.0 : 8.5;
+        const limbSwing = isSprinting ? 0.95 : 0.65;
+
+        if (!this.isGrounded) {
+          // Jump Pose
+          this.torso.position.y = 1.15;
+          this.torso.rotation.x = 0.15;
+          this.leftLeg.rotation.x = -0.4;
+          this.rightLeg.rotation.x = 0.5;
+          this.leftArm.rotation.x = -0.7;
+          this.rightArm.rotation.x = -0.7;
+        } else if (isMoving) {
+          // Walk / Sprint Pose
+          const swing = Math.sin(this.animTimer * walkFreq);
+          this.torso.position.y = 1.1 + Math.abs(Math.sin(this.animTimer * walkFreq)) * 0.1;
+          this.torso.rotation.x = isSprinting ? 0.22 : 0.08;
+          this.torso.rotation.y = swing * 0.08;
+
+          this.leftLeg.rotation.x = swing * limbSwing;
+          this.rightLeg.rotation.x = -swing * limbSwing;
+
+          this.leftArm.rotation.x = -swing * limbSwing;
+          this.rightArm.rotation.x = swing * limbSwing;
+
+          // Footstep audio cues
+          this.stepTimer += dt * walkFreq;
+          if (this.stepTimer > Math.PI) {
+            this.stepTimer -= Math.PI;
+            audio.playFootstep();
+          }
+        } else {
+          // Idle Pose (Gentle natural breathing bob)
+          const breath = Math.sin(this.animTimer * 2.2);
+          this.torso.position.y = 1.1 + breath * 0.03;
+          this.torso.rotation.x = 0.0;
+          this.torso.rotation.y = 0.0;
+
+          this.leftLeg.rotation.x = 0.0;
+          this.rightLeg.rotation.x = 0.0;
+
+          this.leftArm.rotation.x = breath * 0.06;
+          this.rightArm.rotation.x = -breath * 0.06;
+          this.head.rotation.y = Math.sin(this.animTimer * 0.8) * 0.12;
+        }
+      }
+    }
+
+    // --- 10. THIRD-PERSON CAMERA SYSTEM ---
+    class CameraController {
+      constructor(scene, domElement) {
+        this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.2, 500);
+
+        this.distance = 9.5;
+        this.minDistance = 3.5;
+        this.maxDistance = 22.0;
+
+        this.yaw = 0.35; // horizontal rotation
+        this.pitch = 0.42; // vertical elevation angle
+
+        this.targetLookAt = new THREE.Vector3();
+        this.currentLookAt = new THREE.Vector3();
+        this.currentCamPos = new THREE.Vector3();
+
+        this.isInteriorMode = false;
+      }
+
+      update(playerPos, dt) {
+        // Handle Mouse Orbit & Wheel Zoom
+        if (input.mouse.deltaX !== 0 || input.mouse.deltaY !== 0) {
+          this.yaw -= input.mouse.deltaX * CONFIG.mouseSensitivity;
+          this.pitch += input.mouse.deltaY * CONFIG.mouseSensitivity;
+          // Clamp vertical pitch so camera stays above ground
+          this.pitch = Math.max(0.08, Math.min(Math.PI / 2.25, this.pitch));
+        }
+
+        if (input.zoomDelta !== 0) {
+          this.distance += input.zoomDelta * 1.2;
+          this.distance = Math.max(this.minDistance, Math.min(this.maxDistance, this.distance));
+        }
+
+        // Check if player is inside the house
+        const distToHouseInterior = Math.hypot(playerPos.x - houseSystem.housePos.x, playerPos.z - houseSystem.housePos.z);
+        const inHouse = (distToHouseInterior < 3.2 && playerPos.y > houseSystem.housePos.y + 0.3);
+
+        if (inHouse !== this.isInteriorMode) {
+          this.isInteriorMode = inHouse;
+          gameState.isInsideHouse = inHouse;
+          ui.setInteriorBadge(inHouse);
+        }
+
+        // Camera target height above player
+        const lookHeight = this.isInteriorMode ? 1.4 : 1.7;
+        this.targetLookAt.set(playerPos.x, playerPos.y + lookHeight, playerPos.z);
+
+        // Smoothly interpolate look-at target
+        this.currentLookAt.lerp(this.targetLookAt, 1.0 - Math.exp(-12.0 * dt));
+
+        // Calculate Ideal Camera Position from Spherical Coordinates
+        const effectivePitch = this.isInteriorMode ? Math.max(0.38, this.pitch) : this.pitch;
+        const effectiveDist = this.isInteriorMode ? Math.min(4.8, this.distance) : this.distance;
+        const camX = this.currentLookAt.x + effectiveDist * Math.cos(effectivePitch) * Math.sin(this.yaw);
+        const camY = this.currentLookAt.y + effectiveDist * Math.sin(effectivePitch);
+        const camZ = this.currentLookAt.z + effectiveDist * Math.cos(effectivePitch) * Math.cos(this.yaw);
+
+        const idealPos = new THREE.Vector3(camX, camY, camZ);
+
+        // Camera Collision: Prevent camera from dipping below terrain or water
+        const terrainY = getTerrainHeight(idealPos.x, idealPos.z);
+        const safeGroundY = Math.max(0.8, terrainY + 0.85);
+        if (idealPos.y < safeGroundY) {
+          idealPos.y = safeGroundY;
+        }
+
+        // Smooth position damping for fluid indie feel
+        this.currentCamPos.lerp(idealPos, 1.0 - Math.exp(-10.0 * dt));
+        this.camera.position.copy(this.currentCamPos);
+        this.camera.lookAt(this.currentLookAt);
+      }
+    }
+
+    // --- 12. UI & MINIMAP CONTROLLER ---
+    class UIController {
+      constructor() {
+        this.crystalText = document.getElementById('crystal-count-text');
+        this.crystalCounter = document.getElementById('crystal-counter');
+        this.promptElem = document.getElementById('interaction-prompt');
+        this.promptText = document.getElementById('prompt-text');
+        this.interiorBadge = document.getElementById('interior-badge');
+        this.settingsModal = document.getElementById('settings-modal');
+        this.victoryModal = document.getElementById('victory-modal');
+        this.timeDisplay = document.getElementById('time-display');
+        this.timeSlider = document.getElementById('time-slider');
+
+        this.minimapCanvas = document.getElementById('minimap-canvas');
+        this.minimapCtx = this.minimapCanvas.getContext('2d');
+
+        this._bindUIEvents();
+      }
+
+      _bindUIEvents() {
+        // Settings toggle
+        document.getElementById('settings-toggle-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.settingsModal.classList.toggle('active');
+        });
+        document.getElementById('settings-close-btn').addEventListener('click', () => {
+          this.settingsModal.classList.remove('active');
+        });
+
+        // Shadows Toggle
+        document.getElementById('shadow-control').addEventListener('click', (e) => {
+          const opt = e.target.closest('.segmented-option');
+          if (!opt) return;
+          opt.parentElement.querySelectorAll('.segmented-option').forEach(el => el.classList.remove('active'));
+          opt.classList.add('active');
+          const enable = opt.dataset.value === 'on';
+          gameState.shadowsEnabled = enable;
+          sceneManager.renderer.shadowMap.enabled = enable;
+          sceneManager.sunLight.castShadow = enable;
+          sceneManager.scene.traverse(node => {
+            if (node.material) node.material.needsUpdate = true;
+          });
+        });
+
+        // Quality Control
+        document.getElementById('quality-control').addEventListener('click', (e) => {
+          const opt = e.target.closest('.segmented-option');
+          if (!opt) return;
+          opt.parentElement.querySelectorAll('.segmented-option').forEach(el => el.classList.remove('active'));
+          opt.classList.add('active');
+          const q = opt.dataset.value;
+          gameState.quality = q;
+
+          if (q === 'low') {
+            sceneManager.renderer.setPixelRatio(1.0);
+            sceneManager.sunLight.shadow.mapSize.set(1024, 1024);
+          } else if (q === 'med') {
+            sceneManager.renderer.setPixelRatio(1.25);
+            sceneManager.sunLight.shadow.mapSize.set(1536, 1536);
+          } else {
+            sceneManager.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
+            sceneManager.sunLight.shadow.mapSize.set(2048, 2048);
+          }
+          if (sceneManager.sunLight.shadow.map) {
+            sceneManager.sunLight.shadow.map.dispose();
+            sceneManager.sunLight.shadow.map = null;
+          }
+        });
+
+        // Day/Night Slider
+        this.timeSlider.addEventListener('input', (e) => {
+          gameState.timeOfDay = parseFloat(e.target.value);
+          gameState.autoTimeProgression = false;
+          this.updateTimeDisplay();
+          sceneManager.updateDayNight(gameState.timeOfDay);
+        });
+
+        // Reset Game Button
+        document.getElementById('reset-game-btn').addEventListener('click', () => {
+          this.settingsModal.classList.remove('active');
+          this.resetGame();
+        });
+
+        // Restart Game Button from Victory
+        document.getElementById('restart-game-btn').addEventListener('click', () => {
+          this.victoryModal.classList.remove('active');
+          this.resetGame();
+        });
+      }
+
+      updateCrystalCount(current, total) {
+        this.crystalText.textContent = `${current} / ${total}`;
+        this.crystalCounter.classList.add('pulse');
+        setTimeout(() => this.crystalCounter.classList.remove('pulse'), 450);
+      }
+
+      showPrompt(text) {
+        this.promptText.textContent = text;
+        this.promptElem.classList.add('visible');
+      }
+
+      hidePrompt() {
+        this.promptElem.classList.remove('visible');
+      }
+
+      setInteriorBadge(visible) {
+        if (visible) this.interiorBadge.classList.add('visible');
+        else this.interiorBadge.classList.remove('visible');
+      }
+
+      showVictory() {
+        this.victoryModal.classList.add('active');
+      }
+
+      updateTimeDisplay() {
+        const hrs = Math.floor(gameState.timeOfDay);
+        const mins = Math.floor((gameState.timeOfDay % 1) * 60);
+        this.timeDisplay.textContent = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        this.timeSlider.value = gameState.timeOfDay.toFixed(1);
+      }
+
+      drawMinimap(player, collectibles) {
+        const ctx = this.minimapCtx;
+        const w = this.minimapCanvas.width;
+        const h = this.minimapCanvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        const scale = (w * 0.44) / CONFIG.islandRadius;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Minimap Water base
+        ctx.fillStyle = '#102a45';
+        ctx.beginPath();
+        ctx.arc(cx, cy, cx - 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Minimap Island shape
+        ctx.fillStyle = '#3e7e32';
+        ctx.beginPath();
+        ctx.arc(cx, cy, CONFIG.islandRadius * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Shore Sand ring
+        ctx.strokeStyle = '#c2a868';
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+
+        // House indicator
+        const hx = cx + houseSystem.housePos.x * scale;
+        const hz = cy + houseSystem.housePos.z * scale;
+        ctx.fillStyle = '#7a3e1d';
+        ctx.fillRect(hx - 4, hz - 3, 8, 6);
+
+        // Remaining Crystals
+        collectibles.crystals.forEach(c => {
+          if (!c.collected) {
+            const mx = cx + c.x * scale;
+            const mz = cy + c.z * scale;
+
+            ctx.fillStyle = '#64d2ff';
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.arc(mx, mz, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+        });
+
+        // Player Dot & Heading Indicator
+        const px = cx + player.position.x * scale;
+        const pz = cy + player.position.z * scale;
+
+        ctx.save();
+        ctx.translate(px, pz);
+        ctx.rotate(-player.rotationY);
+
+        // Arrow
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(0, -6);
+        ctx.lineTo(4, 4);
+        ctx.lineTo(-4, 4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Red center beacon
+        ctx.fillStyle = '#ff4d4d';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      resetGame() {
+        player.position.set(-6, 3.0, 1.5);
+        player.velocity.set(0, 0, 0);
+        cameraController.distance = 9.5;
+        cameraController.yaw = 0.35;
+        cameraController.pitch = 0.42;
+        collectibles.reset();
+        gameState.isDoorOpen = false;
+        houseSystem.targetDoorAngle = 0;
+        gameState.timeOfDay = 12.0;
+        this.updateTimeDisplay();
+        sceneManager.updateDayNight(12.0);
+      }
+    }
+
+    // --- 13. MAIN INITIALIZATION & GAME LOOP ---
+    let sceneManager, environment, houseSystem, nature, collectibles, player, cameraController, ui;
+
+    function initGame() {
+      // 1. Initialize Scene & Lights
+      sceneManager = new SceneManager();
+
+      // 2. Build Terrain & Water
+      environment = new IslandEnvironment(sceneManager.scene);
+
+      // 3. Build Architecture (House & Porch)
+      houseSystem = new HouseSystem(sceneManager.scene, environment.obstacles);
+
+      // 4. Build Trees, Flora & Clouds
+      nature = new NatureSystem(sceneManager.scene, environment.obstacles);
+
+      // 5. Build Collectible Crystals
+      collectibles = new CollectibleSystem(sceneManager.scene);
+
+      // 6. Build Player Character
+      player = new PlayerCharacter(sceneManager.scene, environment.obstacles);
+
+      // 7. Setup Camera
+      cameraController = new CameraController(sceneManager.scene, sceneManager.canvas);
+
+      // 8. Setup UI & Minimap
+      ui = new UIController();
+
+      // Set initial time & sky
+      sceneManager.updateDayNight(gameState.timeOfDay);
+      ui.updateTimeDisplay();
+
+      // Start animation loop
+      let lastTime = performance.now();
+
+      function gameLoop(now) {
+        requestAnimationFrame(gameLoop);
+
+        const dt = Math.min((now - lastTime) / 1000, 0.08); // clamp frame delta
+        lastTime = now;
+        const timeSec = now * 0.001;
+
+        // Auto Day/Night Cycle Progression
+        if (gameState.autoTimeProgression) {
+          gameState.timeOfDay = (gameState.timeOfDay + dt * CONFIG.timeSpeed) % 24;
+          sceneManager.updateDayNight(gameState.timeOfDay);
+          ui.updateTimeDisplay();
+        }
+
+        // Proximity checks for E interaction (Door & House Entry)
+        const doorPos = new THREE.Vector3(
+          houseSystem.housePos.x,
+          houseSystem.housePos.y + 0.4,
+          houseSystem.housePos.z + houseSystem.depth / 2 + 0.4
+        );
+        const distToDoor = player.position.distanceTo(doorPos);
+
+        if (distToDoor < 2.5) {
+          if (!gameState.isDoorOpen) {
+            ui.showPrompt("Open Door [E]");
+            if (input.interactPressed) {
+              houseSystem.toggleDoor();
+            }
+          } else {
+            const isOutside = player.position.z > (houseSystem.housePos.z + houseSystem.depth / 2);
+            ui.showPrompt(isOutside ? "Enter Cabin [E] / Walk In" : "Close Door [E]");
+            if (input.interactPressed) {
+              if (isOutside && distToDoor < 2.0) {
+                // Smooth step inside
+                player.position.set(houseSystem.housePos.x, houseSystem.housePos.y + 0.45, houseSystem.housePos.z - 0.2);
+                player.velocity.set(0, 0, 0);
+              } else {
+                houseSystem.toggleDoor();
+              }
+            }
+          }
+        } else {
+          ui.hidePrompt();
+        }
+
+        // ESC to reset camera or exit interior mode
+        if (input.escapePressed) {
+          if (cameraController.isInteriorMode) {
+            // Smoothly exit cabin onto porch
+            cameraController.distance = 9.5;
+            cameraController.pitch = 0.42;
+            player.position.set(-6, 2.85, 0.6);
+            player.velocity.set(0, 0, 0);
+          }
+          if (ui.settingsModal.classList.contains('active')) {
+            ui.settingsModal.classList.remove('active');
+          }
+        }
+
+        // Updates
+        houseSystem.update(dt, timeSec);
+        nature.update(dt, timeSec);
+        environment.update(timeSec);
+        collectibles.update(player.position, dt, timeSec);
+        player.update(dt, cameraController.yaw);
+        cameraController.update(player.position, dt);
+
+        // Minimap
+        ui.drawMinimap(player, collectibles);
+
+        // Render 3D Scene
+        sceneManager.renderer.render(sceneManager.scene, cameraController.camera);
+
+        // Reset per-frame input deltas
+        input.resetFrame();
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Launch immediately on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      initGame();
+    });
+  </script>
+</body>
+</html>
